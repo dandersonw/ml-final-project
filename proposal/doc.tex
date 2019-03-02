@@ -22,6 +22,31 @@
 
 \section*{Introduction}
 
+We aim to learn to transliterate English to Japanese
+without any parallel data.
+That is to say,
+given only monolingual corpora
+and the tiniest insight about Japanese orthography
+to learn how to represent English words in Japanese script.
+Learning to transliterate with limited supervision has been well studied,
+but so far as we can tell
+there have been no attempts to learn without at least parallel data.
+The key inspiration was the recent paper by
+Conneau et al. \cite{Conneau2018WordTW}
+in which word translations were learned with no parallel data
+(or any other supervision).
+Conneau et al. did not touch Japanese,
+so we hope to first replicate their work on the Japanese-English language pair.
+We then hope to discover an algorithm to learn to transliterate
+using those (probably noisy) results as training data.
+
+Derick has a personal interest in Japanese, transliteration, and both together.
+% Tim - any note about why you're interested?
+It will be an interesting,
+even if a little incremental,
+step forward if we can manage to transliterate
+without parallel data.
+
 \section*{Background}
 
 \section*{Proposed Approach}
