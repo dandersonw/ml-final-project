@@ -6,6 +6,8 @@
 \usepackage{listings}
 \usepackage{multicol}
 \usepackage{url}
+\usepackage{xeCJK}
+\setCJKmainfont{IPAMincho}
 
 \setlength{\parindent}{4em}
 \setlength{\parskip}{1em}
@@ -49,6 +51,51 @@ without parallel data.
 
 \section*{Background}
 
+\subsection*{Transliteration}
+
+Transliteration is representing words
+in a script or orthographic style
+other than that with which they were originally represented.
+Between close scripts like the Old English alphabet and the modern English alphabet
+this can be a mechanical character to character mapping:
+e.g. ``þe olde'' to ``ye old''.
+Between distant scripts
+like the English alphabet and Japanese katakana
+the task becomes more difficult.
+Translation includes transliteration as a subtask,
+although the relationship between the two
+depends on the language pair, intended audience, and other factors.
+
+In the literature on machine transliteration there is a distinction
+between generative transliteration and transliteration extraction.
+Generative transliteration learns a function for transliterating;
+transliteration extraction just identifies pairs of strings
+to be added to a transliteration dictionary
+\cite{Karimi:2011:MTS:1922649.1922654}.
+In this paper we will be doing generative transliteration.
+
+In translating into both English and Japanese
+probably the most common use of transliteration
+is representing foreign proper nouns.
+Because proper nouns are an open and varied class
+there has been a lot of work on unsupervised learning to transliterate them
+(e.g. \cite{Tao2006UnsupervisedNE}),
+maybe for use in machine translation (e.g. \cite{Durrani2014IntegratingAU})
+or cross-language information retrieval (e.g. \cite{10.1007/978-3-642-40087-2_29}).
+A limitation of our proposed approach
+is that we will not pay any special attention to proper nouns,
+which often have their own conventions for transliteration.
+% maybe we will want to?
+
+The use of transliteration most relevant to this project
+is the borrowing of loan words from foreign languages.
+These can be common nouns (bed, ベッド),
+verbs (join, ジョイン),
+adjectives (sexy, セクシー),
+or even sentence pieces (let's!, レッツ！).
+
+\subsection*{The FB Research Paper} % not actual section title
+
 \section*{Proposed Approach}
 
 \section*{Individual Tasks}
@@ -58,5 +105,6 @@ without parallel data.
 \end{document}
 %%% Local Variables:
 %%% mode: latex
+%%% TeX-engine: xetex
 %%% TeX-master: t
 %%% End:
