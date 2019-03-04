@@ -58,7 +58,7 @@ in a script or orthographic style
 other than that with which they were originally represented.
 Between close scripts like the Old English alphabet and the modern English alphabet
 this can be a mechanical character to character mapping:
-e.g. ``þe olde'' to ``ye old''.
+e.g. ``þe olde'' to ``ye olde''.
 Between distant scripts
 like the English alphabet and Japanese katakana
 the task becomes more difficult.
@@ -99,13 +99,14 @@ a foreign word might be adopted and used.
 In modern orthography
 Japanese represents foreign words
 by approximating the pronunciation of the foreign word
-in a syllabary called katakana.
-In a syllabary each character represents a syllable,
-although katakana has some exceptions by that definition.
+in a syllabary \footnote{In a syllabary each character represents a syllable,
+although katakana has some exceptions by that definition.} called katakana.
 Native Japanese words and loanwords from Chinese
-(the single greatest source of foreign words in Japanese)
-are represented (almost always) in scripts besides katakana:
-the hiragana syllabary and kanji (the Japanese name for Chinese characters).
+\footnote{Words of Sinitic origin are so common in Japanese that they not considered
+  foreign in the same sense as words from English.}
+are usually represented in scripts besides katakana:
+the hiragana syllabary and kanji
+\footnote{``Kanji'' is the Japanese name for Chinese characters.}.
 The approximation of pronunciation is really quite approximate;
 as Japanese has a relatively limited phonetic inventory (range of sounds used)
 not all English sounds can be represented.
@@ -138,6 +139,77 @@ will allow useful transcription pairs to be found.
 \subsection*{The FB Research Paper} % not actual section title
 
 \section*{Proposed Approach}
+
+\subsection*{Transliteration}
+
+In order to not be blocked on
+the completion of the word translation portion of the project,
+we will substitute in some ground-truth data
+while developing the transliteration half of the project.
+Conveniently,
+Facebook Research provides a ground truth English-Japanese dictionary
+of the same sort as is used for their evaluation of word translation,
+available on their GitHub
+\footnote{https://github.com/facebookresearch/MUSE}.
+It contains about 14,000 translations of an English word to a katakana string.
+There is a slightly larger dataset available here
+\footnote{https://github.com/eob/english-japanese-transliteration}
+that we might choose to use.
+CMU makes available a large dataset for English pronunciation
+\footnote{http://www.speech.cs.cmu.edu/cgi-bin/cmudict}.
+
+Considering just the bird's eye view of the task
+as transforming a sequence of characters to another sequence of characters,
+our first thought was to use a sequence-to-sequence model
+like the well known Google neural machine translation model
+\cite{Wu2016GooglesNM}.
+Not surprisingly,
+some people at Google did try that \cite{Rosca2016SequencetosequenceNN}
+and found that the results were highly competitive.
+Since attentional sequence-to-sequence models \cite{Bahdanau2015NeuralMT}
+are so well known,
+we won't describe the details here.
+
+Treating words as just sequences of characters
+means that we diverge from a lot of transliteration methods
+in ignoring pronunciation.
+The main motivation for that
+is that we won't necessarily have pronuncation information for translation-pairs
+that we get out of the word translation half of the project.
+Something of a stretch goal is to validate the intuition
+that considering both pronunciation and spelling will be helpful to transliteration.
+Coincidentally,
+the authors of the neural transliteration paper \cite{Rosca2016SequencetosequenceNN}
+note that that seems like a good idea.
+Considering pronunciation would be achieved by
+training a sequence-to-sequence model to predict
+the phoneme strings in the CMU pronunciation dataset.
+The input to the transliteration model could then be
+(most simply) appended with the predicted phoneme string.
+
+For implementation,
+Derick will use TensorFlow as that is the framework he is comfortable with.
+
+Our personal opinion is that evaluating the correctness
+of a transliterator is not that straightforward.
+Nevertheless,
+we will use a few straightforward measures
+that appear in the transliteration literature.
+The first is simply accuracy:
+for what proportion of the input words
+does the transliterator return the correct transliteration.
+The second is Levenstein distance:
+the number of simple edits necessary to change the output to
+the correct transliteration
+\footnote{https://en.wikipedia.org/wiki/Levenshtein_distance}.
+The third is mean reciprocal rank (MRR):
+a measure of how far down the list of possible results
+(ordered in direction of decreasing probability)
+the correct answer is
+\footnote{https://en.wikipedia.org/wiki/Mean_reciprocal_rank}.
+If we incorporate pronunciation or other features
+we will perform a simple ablation study
+to determine which features were useful.
 
 \section*{Individual Tasks}
 
