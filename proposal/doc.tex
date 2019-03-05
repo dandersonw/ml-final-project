@@ -31,8 +31,7 @@ given only monolingual corpora
 and the tiniest insight about Japanese orthography
 to learn how to represent English words in Japanese script.
 Learning to transliterate with limited supervision has been well studied,
-but so far as we can tell
-there have been no attempts to learn without at least parallel data.
+there have been only limited attempts to learn without at least parallel data.
 The key inspiration was the recent paper by
 Conneau et al. \cite{Conneau2018WordTW}
 in which word translations were learned with no parallel data
@@ -44,10 +43,7 @@ using those (probably noisy) results as training data.
 
 Derick has a personal interest in Japanese, transliteration, and both together.
 % Tim - any note about why you're interested?
-It will be an interesting,
-even if a little incremental,
-step forward if we can manage to transliterate
-without parallel data.
+% more about why our project is signficant
 
 \section*{Background}
 
@@ -93,6 +89,30 @@ Like proper nouns,
 some words may not have equivalents in every language,
 and rather than create a neologism from native material (e.g. as done in Icelandic)
 a foreign word might be adopted and used.
+
+The work most closely related to ours is that of Ravi and Knight
+\cite{Ravi2009LearningPM}
+who learn to back-transliterate from Japanese to English
+without any parallel data.
+Back-transliteration is the process of
+transforming a katakana string that represents an English word
+back into the English word it represents.
+The Ravi and Knight work seems to be followed up some other work
+like a paper by Levinboim et. al. \cite{Levinboim2015ModelIR}
+which aims to improve the same basic approach.
+The key difference between their approach and ours
+is that theirs requires a well trained model of Japanese and English phonetics.
+We may choose to utilize an English phonetic model,
+but don't require either.
+Furthermore,
+they impose constraints and start with favorable intializations
+based on prior knowledge about transliteration.
+We will utilize the fact
+that English words are translated into katakana,
+but hope to not inject any other prior knowledge.
+Learning to transliterate into katakana
+without knowledge of their pronunciation
+or much aid from prior knowledge should be a step forward.
 
 \subsection*{The Japanese-English Language Pair}
 
@@ -174,7 +194,7 @@ Treating words as just sequences of characters
 means that we diverge from a lot of transliteration methods
 in ignoring pronunciation.
 The main motivation for that
-is that we won't necessarily have pronuncation information for translation-pairs
+is that we won't necessarily have pronunciation information for translation-pairs
 that we get out of the word translation half of the project.
 Something of a stretch goal is to validate the intuition
 that considering both pronunciation and spelling will be helpful to transliteration.
@@ -198,7 +218,7 @@ that appear in the transliteration literature.
 The first is simply accuracy:
 for what proportion of the input words
 does the transliterator return the correct transliteration.
-The second is Levenstein distance:
+The second is Levenshtein distance:
 the number of simple edits necessary to change the output to
 the correct transliteration
 \footnote{https://en.wikipedia.org/wiki/Levenshtein_distance}.
@@ -211,7 +231,57 @@ If we incorporate pronunciation or other features
 we will perform a simple ablation study
 to determine which features were useful.
 
+Since the inaccuracy of word translation would appear as irreducible error
+in evaluation on datasets created by that method,
+we will use ground truth data
+from one of the English-Japanese transliteration datasets mentioned earlier.
+A less easily solved issue is that
+word translation might produce pairs with so much noise
+that the model has a hard time learning or learns the wrong thing.
+We don't have a good intuition for expected performance.
+Considering all of the issues mentioned our proposed method might not work;
+but it might well prove able to cut through the noise.
+
+One possibility that we've considered,
+in the event of results from word translation too poor to be used directly,
+is to try and perform the matching of word pairs
+jointly with learning transliteration.
+In essence, bootstrapping the learning of transliteration.
+That is,
+for example,
+train the transliterator first on the highest confidence pairs,
+and then iteratively use that transliterator
+to select more training examples from lower confidence pairs
+by identifying which are most likely to be transliterations.
+Another formulation:
+consider that for each English word
+we have a set of some katakana strings,
+one of which is the correct transliteration.
+If we knew which one were correct we could easily train the transliterator.
+From that intuition is a short step to an EM algorithm.
+Upadhyay et. al. \cite{Upadhyay2018BootstrappingTW}
+bootstrap transliteration from annotator provided examples
+in a way that we could potentially take ideas from.
+Our worry is that extensive investigation into new algorithms
+could start to creep out of scope for this project.
+
+A more achievable fallback for the transliteration portion,
+in the event of prohibitive inaccuracy of word transliteration,
+is to attempt to verify
+the pronunciation hypothesis I refer to as a stretch goal above.
+Generalized tweaking of the model,
+trying related sequence-to-sequence architectures,
+and fiddling of that sort is also easily imagined.
+
 \section*{Individual Tasks}
+
+Derick will work on the transliteration half of the project.
+He is useful for his domain knowledge.
+He has worked on and will probably continue to work on
+closely related projects,
+but never anything of the same description.
+This project is not part of or an extension of anything he has done.
+It is not likely it will become a part of any future project.
 
 \bibliography{doc}{}
 \bibliographystyle{plain}
