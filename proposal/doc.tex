@@ -191,6 +191,23 @@ to many other points).
 
 \section*{Proposed Approach}
 
+\subsection*{Unsupervised Word Translation}
+
+We will first reproduce the results of the Word Translation Without Parallel Data
+paper on the Japanese-English language pair, using fastText Wikipedia embeddings as
+the pre-trained word embedding spaces to align.
+
+Once aligned, a synthetic parallel vocabulary will be generated (as used in the
+refinement procedure during training) and used as noisy ground truth data for
+the transliteration portion of the project. This is assuming our results are comparable
+to what was reported in the paper for similar distant language pairs
+(e.g. \textasciitilde 60\% for Russian-English). If our results are not good enough,
+we will instead use a purely supervised approach to generate the noisy pairs,
+and if that does not suffice, an actual labeled dictionary.
+
+While the code for this paper is released, the implementation is in PyTorch, so
+TensorFlow will be used instead for novelty.
+
 \subsection*{Transliteration}
 
 In order to not be blocked on
