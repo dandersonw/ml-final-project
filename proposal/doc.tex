@@ -193,20 +193,27 @@ to many other points).
 
 \subsection*{Unsupervised Word Translation}
 
-We will first reproduce the results of the Word Translation Without Parallel Data
-paper on the Japanese-English language pair, using fastText Wikipedia embeddings as
-the pre-trained word embedding spaces to align.
+We will first reproduce the word translation results of the Word Translation Without
+Parallel Data paper on the Japanese-English language pair, using fastText Wikipedia
+embeddings as the pre-trained word embedding spaces of dimension 300 to align,
+a size 300 $\times$ 300 matrix for $W$, and a multilayer perceptron with two hidden
+layers of size 2048 for the discriminator. For evaluation, we will use the
+Japanese-English dictionary of about 35,000 word pairs released by the authors and
+the protocol as outlined in the paper (i.e. measuring the number of times one of the
+correct translations of a source word is retrieved, with precision@$k$ for $k = 1,5,10$).
 
 Once aligned, a synthetic parallel vocabulary will be generated (as used in the
 refinement procedure during training) and used as noisy ground truth data for
 the transliteration portion of the project. This is assuming our results are comparable
 to what was reported in the paper for similar distant language pairs
 (e.g. \textasciitilde 60\% for Russian-English). If our results are not good enough,
-we will instead use a purely supervised approach to generate the noisy pairs,
-and if that does not suffice, an actual labeled dictionary.
+we will instead use a purely supervised approach to generate the noisy pairs (i.e. by
+minimizing $WX-Y$ as outlined in the paper's baseline). If the supervised solution is
+still too noisy, the Japanese-English dictionary used for evaluation will be used instead.
 
 While the code for this paper is released, the implementation is in PyTorch, so
-TensorFlow will be used instead for novelty.
+TensorFlow will be used instead for novelty, and all training will be completed on an
+NVIDIA GTX 1080 Ti graphics card.
 
 \subsection*{Transliteration}
 
