@@ -41,9 +41,17 @@ so we hope to first replicate their work on the Japanese-English language pair.
 We then hope to discover an algorithm to learn to transliterate
 using those (probably noisy) results as training data.
 
+As big data becomes more readily available, the cost of manually labeling large
+datasets emphasizes the need for unsupervised algorithms that perform as well if
+not better than their supervised counterparts, and the cost of cleaning these
+datasets highlights the need for algorithms to effectively handle noisy data as well.
+Our project will touch upon both of these problems in the machine transliteration
+sphere, specifically by first generating a Japanese-English dictionary in an
+unsupervised way, then attempting to learn to transliterate from that noisy data.
+
 Derick has a personal interest in Japanese, transliteration, and both together.
-% Tim - any note about why you're interested?
-% more about why our project is signficant
+Timothy would like to gain experience in natural language processing and machine
+translation.
 
 \section*{Background}
 
@@ -221,12 +229,12 @@ does the transliterator return the correct transliteration.
 The second is Levenshtein distance:
 the number of simple edits necessary to change the output to
 the correct transliteration
-\footnote{https://en.wikipedia.org/wiki/Levenshtein_distance}.
+\footnote{https://en.wikipedia.org/wiki/Levenshtein\_distance}.
 The third is mean reciprocal rank (MRR):
 a measure of how far down the list of possible results
 (ordered in direction of decreasing probability)
 the correct answer is
-\footnote{https://en.wikipedia.org/wiki/Mean_reciprocal_rank}.
+\footnote{https://en.wikipedia.org/wiki/Mean\_reciprocal\_rank}.
 If we incorporate pronunciation or other features
 we will perform a simple ablation study
 to determine which features were useful.
