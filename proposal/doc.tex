@@ -164,7 +164,30 @@ meaning sodium (consider the Na elemental abbreviation).
 The hope is that clever matching of English words
 will allow useful transcription pairs to be found.
 
-\subsection*{The FB Research Paper} % not actual section title
+\subsection*{Word Translation Without Parallel Data}
+
+Last year, Conneau et al. proposed a state-of-the-art unsupervised method for machine
+translation without using any parallel corpora, that works well for both distant
+language pairs (e.g. English-Chinese, English-Japanese) and pairs with limited parallel
+data (e.g. English-Esperanto), also outperforming supervised methods on some language
+pairs. This is accomplished by aligning the monolingual word embedding spaces for each
+language in the pair.
+
+Supervised methods attempt to learn a linear mapping $W$ between the source and target
+space such that $WX-Y$ is minimized, where $X$ and $Y$ are the source and target word
+embedding pairs, respectively. Because they attempt to learn $W$ without cross-lingual 
+supervision, they use a domain-adversarial approach, where a discriminator is trained
+to discriminate between translated (i.e. generated) words and words actually from the
+target domain, and $W$ is simultaneously trained to "fool" the discriminator by making
+the generated words as similar to the target words as possible.
+
+While the learned $W$ roughly aligns the two embedding spaces, Conneau et al add two
+modifications to further align the spaces. First, a refinement procedure is proposed
+where the $W$ trained via the adversarial method is used to generate a synthetic
+parallel vocabulary, which is then used to minimize $WX-Y$ in a supervised manner.
+Second, they introduce a cross-domain similarity adaptation to mitigate the "hubness
+problem" (i.e. in high dimensional spaces, some points tend to be nearest neighbors
+to many other points).
 
 \section*{Proposed Approach}
 
