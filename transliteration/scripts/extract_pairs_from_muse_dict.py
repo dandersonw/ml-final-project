@@ -1,8 +1,9 @@
 import pandas as pd
 
 import argparse
-import regex as re
 import unicodedata
+
+from transliteration import data
 
 
 def main():
@@ -20,9 +21,14 @@ def main():
                             names=args.direction.split('_'),
                             keep_default_na=False)
     muse_dict['ja'] = muse_dict['ja'].map(lambda s: unicodedata.normalize('NFKC', s))
-    katakana_re = re.compile(r'\p{IsKatakana}')
-    muse_dict = muse_dict[muse_dict['ja'].map(lambda s: katakana_re.search(s) is not None)]
+    muse_dict = muse_dict[muse_dict['ja'].map(lambda s: is_katakana(s))]
     muse_dict.to_csv(args.output_file, index=False)
+
+
+def is_katakana(chars):
+    return all(ord(c) >= data.KATAKANA_BLOCK_START
+               and ord(c) <= data.KATAKANA_BLOCK_END
+               for c in chars)
 
 
 if __name__ == '__main__':
