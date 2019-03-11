@@ -4,6 +4,7 @@ from tensorflow import keras as tfk
 from tensorflow.keras.layers import Embedding
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import GRU
+from tensorflow.keras.layers import Bidirectional
 
 
 class Config():
@@ -23,18 +24,18 @@ class Encoder(tfk.Model):
     def __init__(self, config: Config):
         super(Encoder, self).__init__()
         self.config = config
-        with tf.name_scope('Model'):
-            self.embedding = Embedding(config.vocab_size,
-                                       config.embedding_size,
-                                       mask_zero=True)
-            self.encoder = GRU(config.lstm_size,
-                               return_sequences=True,
-                               return_state=True)
+        self.embedding = Embedding(config.vocab_size,
+                                   config.embedding_size,
+                                   mask_zero=True)
+        self.encoder = Bidirectional(GRU(config.lstm_size,
+                                         return_sequences=True,
+                                         return_state=True),
+                                     merge_mode='concat')
 
     def call(self, inputs, training=False):
         embedded = self.embedding(inputs)
-        output, state = self.encoder(embedded)
-        return output, state
+        output, foward_state, backward_state = self.encoder(embedded)
+        return output, backward_state
 
 
 class Decoder(tfk.Model):
@@ -44,6 +45,7 @@ class Decoder(tfk.Model):
         self.embedding = Embedding(config.vocab_size,
                                    config.embedding_size,
                                    mask_zero=True)
+        self.initial_state_layer = Dense(config.lstm_size)
         self.decoder = GRU(config.lstm_size,
                            return_state=True)
         self.output_layer = Dense(config.vocab_size)
@@ -57,6 +59,9 @@ class Decoder(tfk.Model):
         output, state = self.decoder(inputs, initial_state=states)
         output = self.output_layer(output)
         return output, state
+
+    def make_initial_state(self, encoder_state):
+        return self.initial_state_layer(encoder_state)
 
 
 class BahdanauAttention(tfk.layers.Layer):

@@ -41,7 +41,7 @@ def evaluate_one_batch(*,
     encoder_output, encoder_state = encoder(input_seq)
 
     decoder_input = tf.constant(start_token, shape=[batch_size])
-    decoder_state = encoder_state
+    decoder_state = decoder.make_initial_state(encoder_state)
     for t in range(max_len):
         decoder_out, decoder_state = decoder(decoder_input,
                                              decoder_state,
@@ -77,7 +77,7 @@ def greedy_decode(*,
     done = np.zeros(batch_size, dtype=np.bool)
 
     decoder_input = tf.constant(start_token, shape=[batch_size])
-    decoder_state = encoder_state
+    decoder_state = decoder.make_initial_state(encoder_state)
     while len(results) < max_len and not np.all(done):
         decoder_out, decoder_state = decoder(decoder_input,
                                              decoder_state,
