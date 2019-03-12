@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
+import contextlib
+
 from .script import SCRIPTS
 
 
@@ -12,7 +14,7 @@ def train_one_batch(*,
                     decoder,
                     optimizer,
                     loss_function):
-    with tf.GradientTape() as tape:
+    with tf.GradientTape() as tape, train_time():
         batch_loss = evaluate_one_batch(batch=batch,
                                         from_script=from_script,
                                         to_script=to_script,
@@ -110,14 +112,23 @@ def transliterate(*,
                   from_script,
                   to_script,
                   encoder,
-                  decoder):
+                  decoder,
+                  decoding_method=greedy_decode):
     intern_input_fun = SCRIPTS[from_script].intern_char
     input_seqs = np.asarray([[intern_input_fun(c) for c in input_str]
                              for input_str in input_strs])
     encoder_output, encoder_state = encoder(input_seqs)
-    results = greedy_decode(encoder_output=encoder_output,
-                            encoder_state=encoder_state,
-                            decoder=decoder,
-                            from_script=from_script,
-                            to_script=to_script)
+    results = decoding_method(encoder_output=encoder_output,
+                              encoder_state=encoder_state,
+                              decoder=decoder,
+                              from_script=from_script,
+                              to_script=to_script)
     return deintern_decode_results(results, to_script)
+
+
+@contextlib.contextmanager
+def train_time():
+    try:
+        yield tf.keras.backend.set_learning_phase(1)
+    finally:
+        tf.keras.backend.set_learning_phase(0)
