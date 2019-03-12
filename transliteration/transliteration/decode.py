@@ -85,7 +85,9 @@ def beam_search_decode(*,
         t += 1
 
     hyp = hyp[:, :, 1:]  # chop off the <start> token we put
-    return hyp[:, 0]
+    hyp = hyp[:, :k_best]
+    hyp_prob = hyp_prob[:, :k_best] * -1
+    return hyp, hyp_prob
 
 
 def greedy_decode(*,
@@ -94,7 +96,9 @@ def greedy_decode(*,
                   decoder,
                   from_script,
                   to_script,
+                  k_best=1,
                   max_len=20):
+    assert k_best is 1
     start_token = SCRIPTS[to_script].intern_char('<start>')
     end_token = SCRIPTS[to_script].intern_char('<end>')
     batch_size = int(encoder_output.shape[0])
@@ -113,19 +117,25 @@ def greedy_decode(*,
                                  decoder_input)
         done = np.logical_or(done, decoder_input == end_token)
         results.append(decoder_input)
-    return np.concatenate([np.expand_dims(r, 1) for r in results],
-                          axis=1)
+    hyp = np.concatenate([np.expand_dims(r, 1) for r in results],
+                         axis=1)
+    hyp = np.expand_dims(hyp, 2)
+    log_probs = np.full([batch_size, 1], 0)
+    return log_probs, hyp
 
 
 def deintern_decode_results(interned_results, to_script):
     results = []
     for i in range(interned_results.shape[0]):
-        result = ''
-        for interned_token in interned_results[i]:
-            token = SCRIPTS[to_script].deintern_char(interned_token)
-            if token == '<end>':
-                break
-            result += token
+        result = []
+        for j in range(interned_results.shape[1]):
+            result_str = ''
+            for interned_token in interned_results[i, j]:
+                token = SCRIPTS[to_script].deintern_char(interned_token)
+                if token == '<end>':
+                    break
+                result_str += token
+            result.append(result_str)
         results.append(result)
     return results
 
@@ -136,14 +146,16 @@ def transliterate(*,
                   to_script,
                   encoder,
                   decoder,
+                  k_best=1,
                   decoding_method=greedy_decode):
     intern_input_fun = SCRIPTS[from_script].intern_char
     input_seqs = np.asarray([[intern_input_fun(c) for c in input_str]
                              for input_str in input_strs])
     encoder_output, encoder_state = encoder(input_seqs)
-    results = decoding_method(encoder_output=encoder_output,
-                              encoder_state=encoder_state,
-                              decoder=decoder,
-                              from_script=from_script,
-                              to_script=to_script)
-    return deintern_decode_results(results, to_script)
+    hyps, weights = decoding_method(encoder_output=encoder_output,
+                                    encoder_state=encoder_state,
+                                    decoder=decoder,
+                                    from_script=from_script,
+                                    k_best=k_best,
+                                    to_script=to_script)
+    return deintern_decode_results(hyps, to_script), weights
