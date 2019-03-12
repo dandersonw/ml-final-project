@@ -49,12 +49,16 @@ class Decoder(tfk.Model):
         self.decoder = GRU(config.lstm_size,
                            return_state=True)
         self.output_layer = Dense(config.vocab_size)
-        self.attention = BahdanauAttention(config.attention_size)
+        if config.attention_size is not None:
+            self.attention = BahdanauAttention(config.attention_size)
+        else:
+            self.attention = None
 
     def call(self, inputs, states, encoder_output, training=False):
         inputs = self.embedding(inputs)
-        context = self.attention([states, encoder_output])
-        inputs = tf.concat([inputs, context], axis=-1)
+        if self.attention is not None:
+            context = self.attention([states, encoder_output])
+            inputs = tf.concat([inputs, context], axis=-1)
         inputs = tf.expand_dims(inputs, axis=1)  # we always only run one timestep
         output, state = self.decoder(inputs, initial_state=states)
         output = self.output_layer(output)
@@ -70,9 +74,13 @@ class BahdanauAttention(tfk.layers.Layer):
         super(BahdanauAttention, self).__init__()
 
     def build(self, input_shape):
-        self.W1 = Dense(self.attention_size)
-        self.W2 = Dense(self.attention_size)
-        self.V = Dense(1)
+        self.W1 = Dense(self.attention_size,
+                        use_bias=False,
+                        activation=None)
+        self.W2 = Dense(self.attention_size,
+                        use_bias=False,
+                        activation=None)
+        self.V = Dense(1, activation=None, use_bias=False)
         self.W1.build(input_shape[0])
         self._trainable_weights = self.W1.trainable_weights
         self.W2.build(input_shape[1])

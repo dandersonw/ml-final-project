@@ -56,7 +56,7 @@ def beam_search_decode(*,
         branching_factor = min(num_beams, vocab_size)
         flat_idx = np.argsort(flattened_prob)[:, :branching_factor]
         beam_choice, token_choice = np.unravel_index(np.ravel(flat_idx),
-                                                     [num_beams, vocab_size])
+                                                     [branching_factor, vocab_size])
         beam_choice = np.reshape(beam_choice, [batch_size, num_beams])
         token_choice = np.reshape(token_choice, [batch_size, num_beams])
 
@@ -119,9 +119,9 @@ def greedy_decode(*,
         results.append(decoder_input)
     hyp = np.concatenate([np.expand_dims(r, 1) for r in results],
                          axis=1)
-    hyp = np.expand_dims(hyp, 2)
+    hyp = np.expand_dims(hyp, 1)
     log_probs = np.full([batch_size, 1], 0)
-    return log_probs, hyp
+    return hyp, log_probs
 
 
 def deintern_decode_results(interned_results, to_script):

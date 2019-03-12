@@ -42,16 +42,17 @@ def parse_tf_example(example, script_names):
             **{k: sequence_parsed[k] for k in sequence_features}}
 
 
-def _append_end_token(example, to_script):
+def _append_end_token(example, scripts):
     result = {**example}
-    end_token = SCRIPTS[to_script].intern_char('<end>')
-    result[to_script] = tf.concat([example[to_script],
-                                   tf.constant(end_token,
-                                               shape=[1],
-                                               dtype=tf.int64)],
-                                  axis=0)
-    len_key = 'length_{}'.format(to_script)
-    result[len_key] = example[len_key] + 1
+    for scriptt in scripts:
+        end_token = SCRIPTS[scriptt].intern_char('<end>')
+        result[scriptt] = tf.concat([example[scriptt],
+                                     tf.constant(end_token,
+                                                 shape=[1],
+                                                 dtype=tf.int64)],
+                                    axis=0)
+        len_key = 'length_{}'.format(scriptt)
+        result[len_key] = example[len_key] + 1
     return result
 
 
@@ -62,7 +63,7 @@ def make_dataset(path,
     with tf.name_scope(path):
         dataset = tf.data.TFRecordDataset(path)
         dataset = dataset.map(lambda d: parse_tf_example(d, [from_script, to_script]))
-        dataset = dataset.map(lambda d: _append_end_token(d, to_script))
+        dataset = dataset.map(lambda d: _append_end_token(d, [from_script, to_script]))
         dataset = dataset.shuffle(buffer_size=1000)
         padding_shapes = {'length_{}'.format(from_script): [],
                           '{}'.format(from_script): [None],
