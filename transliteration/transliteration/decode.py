@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 
 from .script import SCRIPTS
-from .train import deintern_decode_results
 
 
 # TODO: length penalty? other assorted heuristics?
@@ -87,3 +86,64 @@ def beam_search_decode(*,
 
     hyp = hyp[:, :, 1:]  # chop off the <start> token we put
     return hyp[:, 0]
+
+
+def greedy_decode(*,
+                  encoder_output,
+                  encoder_state,
+                  decoder,
+                  from_script,
+                  to_script,
+                  max_len=20):
+    start_token = SCRIPTS[to_script].intern_char('<start>')
+    end_token = SCRIPTS[to_script].intern_char('<end>')
+    batch_size = int(encoder_output.shape[0])
+    results = []
+    done = np.zeros(batch_size, dtype=np.bool)
+
+    decoder_input = tf.constant(start_token, shape=[batch_size])
+    decoder_state = decoder.make_initial_state(encoder_state)
+    while len(results) < max_len and not np.all(done):
+        decoder_out, decoder_state = decoder(decoder_input,
+                                             decoder_state,
+                                             encoder_output)
+        decoder_input = np.argmax(decoder_out, axis=-1)
+        decoder_input = np.where(done,
+                                 np.zeros_like(decoder_input),
+                                 decoder_input)
+        done = np.logical_or(done, decoder_input == end_token)
+        results.append(decoder_input)
+    return np.concatenate([np.expand_dims(r, 1) for r in results],
+                          axis=1)
+
+
+def deintern_decode_results(interned_results, to_script):
+    results = []
+    for i in range(interned_results.shape[0]):
+        result = ''
+        for interned_token in interned_results[i]:
+            token = SCRIPTS[to_script].deintern_char(interned_token)
+            if token == '<end>':
+                break
+            result += token
+        results.append(result)
+    return results
+
+
+def transliterate(*,
+                  input_strs,
+                  from_script,
+                  to_script,
+                  encoder,
+                  decoder,
+                  decoding_method=greedy_decode):
+    intern_input_fun = SCRIPTS[from_script].intern_char
+    input_seqs = np.asarray([[intern_input_fun(c) for c in input_str]
+                             for input_str in input_strs])
+    encoder_output, encoder_state = encoder(input_seqs)
+    results = decoding_method(encoder_output=encoder_output,
+                              encoder_state=encoder_state,
+                              decoder=decoder,
+                              from_script=from_script,
+                              to_script=to_script)
+    return deintern_decode_results(results, to_script)
