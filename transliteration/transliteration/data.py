@@ -64,12 +64,11 @@ def make_dataset(path,
         dataset = tf.data.TFRecordDataset(path)
         dataset = dataset.map(lambda d: parse_tf_example(d, [from_script, to_script]))
         dataset = dataset.map(lambda d: _append_end_token(d, [from_script, to_script]))
-        dataset = dataset.shuffle(buffer_size=1000)
+        dataset = dataset.shuffle(buffer_size=100000)
         padding_shapes = {'length_{}'.format(from_script): [],
                           '{}'.format(from_script): [None],
                           'length_{}'.format(to_script): [],
                           '{}'.format(to_script): [None]}
         dataset = dataset.padded_batch(batch_size,
                                        padded_shapes=padding_shapes)
-        dataset = dataset.prefetch(10)
         return dataset
