@@ -129,13 +129,13 @@ def deintern_decode_results(interned_results, to_script):
     for i in range(interned_results.shape[0]):
         result = []
         for j in range(interned_results.shape[1]):
-            result_str = ''
+            result_str = []
             for interned_token in interned_results[i, j]:
                 token = SCRIPTS[to_script].deintern_char(interned_token)
                 if token == '<end>':
                     break
-                result_str += token
-            result.append(result_str)
+                result_str.append(token)
+            result.append(SCRIPTS[to_script].join_char.join(result_str))
         results.append(result)
     return results
 

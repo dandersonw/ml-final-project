@@ -2,6 +2,7 @@ import unidecode
 import unicodedata
 
 import abc
+import pkg_resources
 
 NUM_SPECIAL_TOKENS = 3
 KATAKANA_BLOCK_START = 0x30A0
@@ -12,6 +13,11 @@ class Script(abc.ABC):
     @property
     @abc.abstractmethod
     def id_code():
+        pass
+
+    @property
+    @abc.abstractmethod
+    def join_char():
         pass
 
     @property
@@ -78,6 +84,7 @@ class Script(abc.ABC):
 
 class English(Script):
     id_code = 'en'
+    join_char = ''
     _vocab_size = 26
 
     def _char_in_range(self, char):
@@ -97,6 +104,7 @@ class English(Script):
 
 class Katakana(Script):
     id_code = 'ja'
+    join_char = ''
     _vocab_size = KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1
 
     def _char_in_range(self, char):
@@ -113,7 +121,31 @@ class Katakana(Script):
         return unicodedata.normalize('NFKC', string)
 
 
+class CMUPronunciation(Script):
+    id_code = 'cmu'
+    join_char = ' '
+    intern_dict = {k: i for i, k in
+                   enumerate(str(pkg_resources.resource_string('transliteration.resources',
+                                                               'cmudict-0.7b.symbols'),
+                                 encoding='utf8')
+                             .split('\n'))}
+    reverse_intern_dict = {v: k for k, v in intern_dict.items()}
+    _vocab_size = len(intern_dict)
+
+    def _char_in_range(self, char):
+        return char in self.intern_dict
+
+    def _intern_char(self, char):
+        return self.intern_dict[char]
+
+    def _deintern_char(self, char):
+        return self.reverse_intern_dict[char]
+
+    def preprocess_string(self, string):
+        return string.split(' ')
+
+
 SCRIPTS = dict()
-for script_class in [English, Katakana]:
+for script_class in [English, Katakana, CMUPronunciation]:
     script = script_class()
     SCRIPTS[script.id_code] = script

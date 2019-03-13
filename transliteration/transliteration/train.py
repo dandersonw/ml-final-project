@@ -12,6 +12,8 @@ def train_one_batch(*,
                     to_script,
                     encoder,
                     decoder,
+                    train_encoder=True,
+                    train_decoder=True,
                     optimizer,
                     loss_function):
     with tf.GradientTape() as tape, train_time():
@@ -21,7 +23,11 @@ def train_one_batch(*,
                                         encoder=encoder,
                                         decoder=decoder,
                                         loss_function=loss_function)
-        variables = encoder.variables + decoder.variables
+        variables = []
+        if train_encoder:
+            variables.extend(encoder.variables)
+        if train_decoder:
+            variables.extend(decoder.variables)
         gradients = tape.gradient(batch_loss, variables)
         optimizer.apply_gradients(zip(gradients, variables))
     return batch_loss
@@ -43,7 +49,7 @@ def evaluate_one_batch(*,
     encoder_output, encoder_state = encoder(input_seq)
 
     decoder_input = tf.constant(start_token, shape=[batch_size])
-    decoder_state = decoder.make_initial_state(encoder_state)
+    decoder_state = decoder.make_initial_state(encoder_state, encoder_output)
     for t in range(max_len):
         decoder_out, decoder_state = decoder(decoder_input,
                                              decoder_state,
