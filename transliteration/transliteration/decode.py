@@ -25,12 +25,14 @@ def beam_search_decode(*,
     hyp_prob = np.full([batch_size, num_beams], np.inf)  # neg log prob
     done = np.zeros([batch_size, num_beams], dtype=np.bool)
 
-    decoder_state = decoder.make_initial_state(encoder_state)
-    # TODO: consider what to do if decoder state is more complicated
-    hyp_state = np.zeros([batch_size, num_beams, decoder_state.shape[-1]],
-                         dtype=np.float32)
+    decoder_state = decoder.make_initial_state(encoder_state, encoder_output)
 
-    hyp_state[:, 0] = decoder_state
+    # TODO: think about what if the nested structure were even more complex
+    # WARNING: not really a general solution
+    hyp_state = [tf.tile(tf.expand_dims(e, 1),
+                         [1, num_beams, 1])
+                 for e in decoder_state]
+    # END WARNING
     hyp[:, 0, 0] = start_token
     hyp_prob[:, 0] = 0
 
@@ -41,8 +43,9 @@ def beam_search_decode(*,
     while t < max_len and not np.all(done):
         flat_in = tf.reshape(hyp[:, :, t - 1],
                              [batch_size * num_beams])
-        flat_state = tf.reshape(hyp_state,
-                                [batch_size * num_beams, -1])
+        # WARNING: not really a general solution
+        flat_state = [tf.reshape(e, [batch_size * num_beams, -1]) for e in hyp_state]
+        # END WARNING
 
         pred, state_pred = decoder(flat_in,
                                    flat_state,
@@ -64,7 +67,9 @@ def beam_search_decode(*,
         # but my kungfu isn't strong enough
         done_ = np.zeros_like(done)
         hyp_ = np.zeros_like(hyp)
-        hyp_state_ = np.zeros_like(hyp_state)
+        # WARNING: not really a general solution
+        hyp_state_ = [np.zeros_like(e) for e in hyp_state]
+        # END WARNING
         hyp_prob_ = np.zeros_like(hyp_prob)
         for i in range(batch_size):
             for j in range(num_beams):
@@ -74,7 +79,10 @@ def beam_search_decode(*,
                                             chosen_token == end_token)
                 hyp_[i, j] = hyp[i, parent_beam]
                 hyp_[i, j, t] = chosen_token
-                hyp_state_[i, j] = state_pred[i * num_beams + parent_beam]
+                # WARNING: not really a general solution
+                for s_, s in zip(hyp_state_, state_pred):
+                    s_[i, j] = s[i * num_beams + parent_beam]
+                # END WARNING
                 hyp_prob_[i, j] = prob[i, parent_beam, chosen_token]
         done = done_
         hyp = hyp_
@@ -106,7 +114,7 @@ def greedy_decode(*,
     done = np.zeros(batch_size, dtype=np.bool)
 
     decoder_input = tf.constant(start_token, shape=[batch_size])
-    decoder_state = decoder.make_initial_state(encoder_state)
+    decoder_state = decoder.make_initial_state(encoder_state, encoder_output)
     while len(results) < max_len and not np.all(done):
         decoder_out, decoder_state = decoder(decoder_input,
                                              decoder_state,
@@ -149,7 +157,8 @@ def transliterate(*,
                   k_best=1,
                   decoding_method=greedy_decode):
     intern_input_fun = SCRIPTS[from_script].intern_char
-    input_seqs = np.asarray([[intern_input_fun(c) for c in input_str]
+    input_seqs = np.asarray([[intern_input_fun(c)
+                              for c in SCRIPTS[from_script].preprocess_string(input_str)]
                              for input_str in input_strs])
     encoder_output, encoder_state = encoder(input_seqs)
     hyps, weights = decoding_method(encoder_output=encoder_output,

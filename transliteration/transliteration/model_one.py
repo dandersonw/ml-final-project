@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras as tfk
 
+from tensorflow.contrib.seq2seq import monotonic_attention
 from tensorflow.keras.layers import Embedding
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import GRU
@@ -13,10 +14,12 @@ class Config():
                  lstm_size,
                  embedding_size,
                  vocab_size,
+                 attention='bahdanau',
                  attention_size):
         self.lstm_size = lstm_size
         self.embedding_size = embedding_size
         self.vocab_size = vocab_size
+        self.attention = attention
         self.attention_size = attention_size
 
 
@@ -34,7 +37,7 @@ class Encoder(tfk.Model):
 
     def call(self, inputs, training=False):
         embedded = self.embedding(inputs)
-        output, foward_state, backward_state = self.encoder(embedded)
+        output, forward_state, backward_state = self.encoder(embedded)
         return output, backward_state
 
 
@@ -49,23 +52,31 @@ class Decoder(tfk.Model):
         self.decoder = GRU(config.lstm_size,
                            return_state=True)
         self.output_layer = Dense(config.vocab_size)
-        if config.attention_size is not None:
-            self.attention = BahdanauAttention(config.attention_size)
-        else:
+
+        if config.attention is None:
             self.attention = None
+        elif config.attention == 'bahdanau':
+            self.attention = BahdanauAttention(config.attention_size)
+        elif config.attention == 'monotonic_bahdanau':
+            self.attention = BahdanauMonotonicAttention(config.attention_size)
 
     def call(self, inputs, states, encoder_output, training=False):
+        decoder_hidden, previous_alignments = states
         inputs = self.embedding(inputs)
         if self.attention is not None:
-            context = self.attention([states, encoder_output])
+            context, alignments = self.attention([decoder_hidden,
+                                                  encoder_output,
+                                                  previous_alignments])
             inputs = tf.concat([inputs, context], axis=-1)
         inputs = tf.expand_dims(inputs, axis=1)  # we always only run one timestep
-        output, state = self.decoder(inputs, initial_state=states)
+        output, state = self.decoder(inputs, initial_state=decoder_hidden)
         output = self.output_layer(output)
-        return output, state
+        return output, (state, alignments)
 
-    def make_initial_state(self, encoder_state):
-        return self.initial_state_layer(encoder_state)
+    def make_initial_state(self, encoder_state, encoder_output):
+        decoder_hidden = self.initial_state_layer(encoder_state)
+        alignments = self.attention.calculate_initial_alignments(encoder_output)
+        return decoder_hidden, alignments
 
 
 class BahdanauAttention(tfk.layers.Layer):
@@ -89,13 +100,30 @@ class BahdanauAttention(tfk.layers.Layer):
         self._trainable_weights.extend(self.V.trainable_weights)
         super(BahdanauAttention, self).build(input_shape)
 
+    def calculate_initial_alignments(self, encoder_out):
+        return tf.zeros(encoder_out.shape[:2])  # not actually used
+
     def call(self, inputs):
-        decoder_hidden, encoder_out = inputs
+        decoder_hidden, encoder_out, previous_alignments = inputs
         decoder_hidden = tf.expand_dims(decoder_hidden, 1)
         weights = self.V(tf.nn.tanh(self.W1(decoder_hidden) + self.W2(encoder_out)))
         weights = tf.nn.softmax(weights, axis=1)
-        return tf.reduce_sum(weights * encoder_out, axis=1)
+        return tf.reduce_sum(weights * encoder_out, axis=1), tf.squeeze(weights, axis=2)
 
     def compute_output_shape(self, input_shape):
         # cut out the time dimension of the second input
         return [input_shape[1][0], input_shape[1][2]]
+
+
+class BahdanauMonotonicAttention(BahdanauAttention):
+    def calculate_initial_alignments(self, encoder_out):
+        oh = tf.one_hot(0, encoder_out.shape[1])
+        return tf.tile(tf.expand_dims(oh, 0), [encoder_out.shape[0], 1])
+
+    def call(self, inputs):
+        decoder_hidden, encoder_out, previous_alignments = inputs
+        decoder_hidden = tf.expand_dims(decoder_hidden, 1)
+        weights = self.V(tf.nn.tanh(self.W1(decoder_hidden) + self.W2(encoder_out)))
+        weights = tf.nn.sigmoid(tf.squeeze(weights, axis=2))
+        weights = monotonic_attention(weights, previous_alignments, 'recursive')
+        return tf.reduce_sum(tf.expand_dims(weights, 2) * encoder_out, axis=1), weights
