@@ -19,6 +19,7 @@ def beam_search_decode(*,
     start_token = SCRIPTS[to_script].intern_char('<start>')
     end_token = SCRIPTS[to_script].intern_char('<end>')
     batch_size = int(encoder_output.shape[0])
+    timesteps = int(encoder_output.shape[1])
     vocab_size = SCRIPTS[to_script].vocab_size
 
     hyp = np.zeros([batch_size, num_beams, max_len], dtype=np.int64)
@@ -26,7 +27,6 @@ def beam_search_decode(*,
     done = np.zeros([batch_size, num_beams], dtype=np.bool)
 
     decoder_state = decoder.make_initial_state(encoder_state, encoder_output)
-
     # TODO: think about what if the nested structure were even more complex
     # WARNING: not really a general solution
     hyp_state = [tf.tile(tf.expand_dims(e, 1),
@@ -35,6 +35,9 @@ def beam_search_decode(*,
     # END WARNING
     hyp[:, 0, 0] = start_token
     hyp_prob[:, 0] = 0
+
+    encoder_output = tf.tile(tf.expand_dims(encoder_output, 1), [1, num_beams, 1, 1])
+    encoder_output = tf.reshape(encoder_output, [batch_size * num_beams, timesteps, -1])
 
     must_be_pad = np.full([vocab_size], np.inf)
     must_be_pad[0] = 0
@@ -148,23 +151,33 @@ def deintern_decode_results(interned_results, to_script):
     return results
 
 
+def intern_strings(input_strs, from_script):
+    scriptt = SCRIPTS[from_script] 
+    seqs = [[scriptt.intern_char(c)
+             for c in scriptt.preprocess_string(input_str)]
+            for input_str in input_strs]
+    ndarray = np.zeros([len(seqs), max(len(seq) for seq in seqs)],
+                       dtype=np.int64)
+    for i, seq in enumerate(seqs):
+        for t, c in enumerate(seq):
+            ndarray[i, t] = c
+    return ndarray
+    
+
 def transliterate(*,
                   input_strs,
                   from_script,
                   to_script,
                   encoder,
                   decoder,
-                  k_best=1,
-                  decoding_method=greedy_decode):
-    intern_input_fun = SCRIPTS[from_script].intern_char
-    input_seqs = np.asarray([[intern_input_fun(c)
-                              for c in SCRIPTS[from_script].preprocess_string(input_str)]
-                             for input_str in input_strs])
+                  decoding_method=greedy_decode,
+                  **kwargs):
+    input_seqs = intern_strings(input_strs, from_script)
     encoder_output, encoder_state = encoder(input_seqs)
     hyps, weights = decoding_method(encoder_output=encoder_output,
                                     encoder_state=encoder_state,
                                     decoder=decoder,
                                     from_script=from_script,
-                                    k_best=k_best,
-                                    to_script=to_script)
+                                    to_script=to_script,
+                                    **kwargs)
     return deintern_decode_results(hyps, to_script), weights
