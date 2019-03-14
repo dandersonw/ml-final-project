@@ -85,15 +85,22 @@ class Script(abc.ABC):
 class English(Script):
     id_code = 'en'
     join_char = ''
-    _vocab_size = 26
+    special_dict = {k: i + 26 for i, k in enumerate({' '})}
+    reverse_special_dict = {i: k for k, i in special_dict.items()}
+    _vocab_size = 26 + len(special_dict)
 
     def _char_in_range(self, char):
-        return ord(char) <= ord('z') and ord(char) >= ord('a')
+        return (ord(char) <= ord('z') and ord(char) >= ord('a')
+                or char in self.special_dict)
 
     def _intern_char(self, char):
+        if char in self.special_dict:
+            return self.special_dict[char]
         return ord(char) - ord('a')
 
     def _deintern_char(self, interned):
+        if interned in self.reverse_special_dict:
+            return self.reverse_special_dict[interned]
         return chr(interned + ord('a'))
 
     def preprocess_string(self, string):
