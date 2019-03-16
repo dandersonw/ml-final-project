@@ -28,6 +28,7 @@ def train_one_batch(*,
             variables.extend(encoder.variables)
         if train_decoder:
             variables.extend(decoder.variables)
+        variables = [v for v in variables if v.trainable]
         gradients = tape.gradient(batch_loss, variables)
         gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
         optimizer.apply_gradients(zip(gradients, variables))

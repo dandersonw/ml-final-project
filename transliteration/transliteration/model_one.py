@@ -41,6 +41,17 @@ class Encoder(tfk.Model):
         return output, backward_state
 
 
+class CombinedEncoder(Encoder):
+    def __init__(self, config: Config, base_encoder: Encoder):
+        super(CombinedEncoder, self).__init__(config)
+        self.base_encoder = base_encoder
+
+    def call(self, inputs):
+        base_out, base_state = self.base_encoder(inputs)
+        this_out, _, this_state = self.encoder(self.embedding(inputs))
+        return tf.concat([base_out, this_out], axis=-1), tf.concat([base_state, this_state], axis=-1)
+
+
 class Decoder(tfk.Model):
     def __init__(self, config: Config):
         super(Decoder, self).__init__()
