@@ -162,7 +162,7 @@ def intern_strings(input_strs, from_script):
         for t, c in enumerate(seq):
             ndarray[i, t] = c
     return ndarray
-    
+
 
 def transliterate(*,
                   input_strs,
@@ -171,13 +171,23 @@ def transliterate(*,
                   encoder,
                   decoder,
                   decoding_method=greedy_decode,
+                  batch_size=128,
                   **kwargs):
-    input_seqs = intern_strings(input_strs, from_script)
-    encoder_output, encoder_state = encoder(input_seqs)
-    hyps, weights = decoding_method(encoder_output=encoder_output,
-                                    encoder_state=encoder_state,
-                                    decoder=decoder,
-                                    from_script=from_script,
-                                    to_script=to_script,
-                                    **kwargs)
+    input_len = len(input_strs)
+    hyps = []
+    weights = []
+    for l in range(0, input_len, batch_size):
+        r = min(input_len, l + batch_size)
+        input_seqs = intern_strings(input_strs[l:r], from_script)
+        encoder_output, encoder_state = encoder(input_seqs)
+        batch_hyps, batch_weights = decoding_method(encoder_output=encoder_output,
+                                                    encoder_state=encoder_state,
+                                                    decoder=decoder,
+                                                    from_script=from_script,
+                                                    to_script=to_script,
+                                                    **kwargs)
+        hyps.append(batch_hyps)
+        weights.append(batch_weights)
+    hyps = np.concatenate(hyps, axis=0)
+    weights = np.concatenate(weights, axis=0)
     return deintern_decode_results(hyps, to_script), weights
