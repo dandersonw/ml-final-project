@@ -7,6 +7,8 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import GRU
 from tensorflow.keras.layers import Bidirectional
 
+from . import decode
+
 
 class Config():
     def __init__(self,
@@ -42,14 +44,16 @@ class Encoder(tfk.Model):
 
 
 class CombinedEncoder(Encoder):
+    """Concats the output of a base encoder on top of another learned one"""
     def __init__(self, config: Config, base_encoder: Encoder):
         super(CombinedEncoder, self).__init__(config)
         self.base_encoder = base_encoder
 
     def call(self, inputs):
-        base_out, base_state = self.base_encoder(inputs)
-        this_out, _, this_state = self.encoder(self.embedding(inputs))
-        return tf.concat([base_out, this_out], axis=-1), tf.concat([base_state, this_state], axis=-1)
+        this_out, _, this_state = super(CombinedEncoder, self)(inputs)
+        base_out, _, base_state = self.base_encoder(inputs)
+        return (tf.concat([base_out, this_out], axis=-1),
+                tf.concat([base_state, this_state], axis=-1))
 
 
 class Decoder(tfk.Model):
@@ -63,13 +67,8 @@ class Decoder(tfk.Model):
         self.decoder = GRU(config.lstm_size,
                            return_state=True)
         self.output_layer = Dense(config.vocab_size)
-
-        if config.attention is None:
-            self.attention = None
-        elif config.attention == 'bahdanau':
-            self.attention = BahdanauAttention(config.attention_size)
-        elif config.attention == 'monotonic_bahdanau':
-            self.attention = BahdanauMonotonicAttention(config.attention_size)
+        self.attention = build_attention(config.attention,
+                                         config.attention_size)
 
     def call(self, inputs, states, encoder_output, training=False):
         decoder_hidden, previous_alignments = states
@@ -88,6 +87,49 @@ class Decoder(tfk.Model):
         decoder_hidden = self.initial_state_layer(encoder_state)
         alignments = self.attention.calculate_initial_alignments(encoder_output)
         return decoder_hidden, alignments
+
+
+class StackedEncoderDecoderEncoder(tfk.layers.Layer):
+    def __init__(self,
+                 encoder: Encoder,
+                 decoder: Decoder,
+                 decoder_script):
+        super(StackedEncoderDecoderEncoder, self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.decoder_script = decoder_script
+
+    def call(self, inputs):
+        encoder_out, encoder_state = self.encoder(inputs)
+        decoder_out, _ \
+            = decode.beam_search_decode(encoder_output=encoder_out,
+                                        encoder_state=encoder_state,
+                                        decoder=self.decoder,
+                                        to_script=self.decoder_script,
+                                        k_best=1)
+        decoder_out = tf.squeeze(decoder_out, axis=-2)
+        # decoder_state = decode._my_struct_map(lambda e: tf.squeeze(e, axis=1),
+        #                                       decoder_state)
+        decoder_out = self.decoder.embedding(decoder_out)
+        return (encoder_out, decoder_out), encoder_state
+
+
+def build_attention(name, size):
+    if name.startswith('multiple:'):
+        name = name[len('multiple:'):]
+        components = [attention_class_for_string(c) for c in name.split(',')]
+        return MultipleAttention(size, components)
+    else:
+        return attention_class_for_string(name)(size)
+
+
+def attention_class_for_string(name):
+    if name is None:
+        return None
+    elif name == 'bahdanau':
+        return BahdanauAttention
+    elif name == 'monotonic_bahdanau':
+        return BahdanauMonotonicAttention
 
 
 class BahdanauAttention(tfk.layers.Layer):
@@ -138,3 +180,37 @@ class BahdanauMonotonicAttention(BahdanauAttention):
         weights = tf.nn.sigmoid(tf.squeeze(weights, axis=2))
         weights = monotonic_attention(weights, previous_alignments, 'recursive')
         return tf.reduce_sum(tf.expand_dims(weights, 2) * encoder_out, axis=1), weights
+
+
+class MultipleAttention(tfk.layers.Layer):
+    def __init__(self, attention_size, components):
+        assert len(components) > 1
+        self.components = [c(attention_size) for c in components]
+        super(MultipleAttention, self).__init__()
+
+    def build(self, input_shape):
+        key_shape, value_shapes, alignment_shapes = input_shape
+        for component, value_shape, alignment_shape in zip(self.components, value_shapes, alignment_shapes):
+            component.build((key_shape, value_shape, alignment_shape))
+        super(MultipleAttention, self).build(input_shape)
+
+    def calculate_initial_alignments(self, attention_values):
+        assert len(attention_values) == len(self.components)
+        return [c.calculate_initial_alignments(value)
+                for c, value in zip(self.components, attention_values)]
+
+    def call(self, inputs):
+        attention_key, attention_values, previous_alignments = inputs
+        assert len(attention_values) == len(self.components)
+        assert len(previous_alignments) == len(self.components)
+
+        outputs = []
+        alignments = []
+        for component, value, alignment in zip(self.components,
+                                               attention_values,
+                                               previous_alignments):
+            output, alignment = component((attention_key, value, alignment))
+            outputs.append(output)
+            alignments.append(alignment)
+
+        return tf.concat(outputs, axis=-1), alignments
