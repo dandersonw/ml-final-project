@@ -18,6 +18,16 @@ class Script(abc.ABC):
     @property
     @abc.abstractmethod
     def join_char():
+        """Character to be placed between all other characters when printing this
+        script
+
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def word_separator_char():
+        """Character to be placed between words when printing this script"""
         pass
 
     @property
@@ -85,6 +95,7 @@ class Script(abc.ABC):
 class English(Script):
     id_code = 'en'
     join_char = ''
+    word_separator_char = ' '
     special_dict = {k: i + 26 for i, k in enumerate({' '})}
     reverse_special_dict = {i: k for k, i in special_dict.items()}
     _vocab_size = 26 + len(special_dict)
@@ -112,6 +123,7 @@ class English(Script):
 class Katakana(Script):
     id_code = 'ja'
     join_char = ''
+    word_separator_char = ''
     _vocab_size = KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1
 
     def _char_in_range(self, char):
@@ -131,6 +143,7 @@ class Katakana(Script):
 class CMUPronunciation(Script):
     id_code = 'cmu'
     join_char = ' '
+    word_separator_char = ''
     intern_dict = {k: i for i, k in
                    enumerate(str(pkg_resources.resource_string('transliteration.resources',
                                                                'cmudict-0.7b.symbols'),
