@@ -14,6 +14,9 @@ def main():
     parser.add_argument('--direction',
                         default='ja_en',
                         choices=['en_ja', 'ja_en'])
+    parser.add_argument('--frequency-cutoff',
+                        required=False,
+                        type=int)
     parser.add_argument('--noise-commonness-cutoff',
                         default=20,
                         type=int)
@@ -46,7 +49,9 @@ def main():
     out_to = deque()
     for i, row in translations.iterrows():
         from_token = row[from_script_name]
-        if not valid_raw_str(from_token, from_script):
+        if (not valid_raw_str(from_token, from_script)
+            or (args.frequency_cutoff is not None
+                and row['frequency_rank'] > args.frequency_cutoff)):
             continue
 
         num_output = 0
