@@ -43,10 +43,10 @@ def transfer_learning_setup(*,
                             encoder_config,
                             decoder_config,
                             from_script,
-                            to_script_initial,
-                            to_script_target):
-    """First train on from_script -> to_script_initial, then transfer the encoder to
-    from_script -> to_script_target.
+                            transfer_to_script,
+                            to_script):
+    """First train on from_script -> transfer_to_script, then transfer the encoder to
+    from_script -> to_script.
 
     """
 
@@ -56,10 +56,10 @@ def transfer_learning_setup(*,
                       **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
     encoder_config = model_one.Config(**encoder_config)
     decoder_config_initial = {**decoder_config,
-                              **{'vocab_size': script.SCRIPTS[to_script_initial].vocab_size}}
+                              **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
     decoder_config_initial = model_one.Config(**decoder_config_initial)
     decoder_config = {**decoder_config,
-                      **{'vocab_size': script.SCRIPTS[to_script_target].vocab_size}}
+                      **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
     decoder_config = model_one.Config(**decoder_config)
 
     encoder = model_one.Encoder(encoder_config)
@@ -68,10 +68,10 @@ def transfer_learning_setup(*,
 
     train.exercise_encoder_decoder(encoder=encoder,
                                    decoder=decoder_initial,
-                                   to_script=to_script_initial)
+                                   to_script=transfer_to_script)
     train.exercise_encoder_decoder(encoder=encoder,
                                    decoder=decoder,
-                                   to_script=to_script_target)
+                                   to_script=to_script)
 
     def make_checkpoint_obj():
         # we will want to rerun this when the graph changes,

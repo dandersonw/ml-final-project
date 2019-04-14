@@ -47,7 +47,7 @@ def main():
                                        train_data=args.train_data,
                                        valid_data=args.valid_data,
                                        transfer_train_data=args.transfer_train_data,
-                                       trasfer_valid_data=args.transfer_valid_data,
+                                       transfer_valid_data=args.transfer_valid_data,
                                        from_script=args.from_script,
                                        to_script=args.to_script,
                                        transfer_to_script=args.transfer_to_script,
@@ -90,6 +90,7 @@ def train_model(*,
         models = model_setup.transfer_learning_setup(encoder_config=encoder_config,
                                                      decoder_config=decoder_config,
                                                      from_script=from_script,
+                                                     transfer_to_script=transfer_to_script,
                                                      to_script=transfer_to_script)
         models_ = {**models, **{'decoder': models['decoder_initial']}}
         train.normal_training_regimen(train_data=transfer_train_data,
@@ -123,5 +124,6 @@ def train_model(*,
 
 
 if __name__ == '__main__':
+    tf.logging.set_verbosity('ERROR')
     tf.enable_eager_execution()
     main()

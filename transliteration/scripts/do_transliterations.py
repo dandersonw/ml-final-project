@@ -47,5 +47,6 @@ def main():
 
 
 if __name__ == '__main__':
+    tf.logging.set_verbosity('ERROR')
     tf.enable_eager_execution()
     main()
