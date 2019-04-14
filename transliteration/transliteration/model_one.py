@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from tensorflow import keras as tfk
 
 from tensorflow.contrib.seq2seq import monotonic_attention
@@ -17,7 +18,7 @@ class Config():
                  embedding_size,
                  vocab_size,
                  attention='bahdanau',
-                 attention_size):
+                 attention_size=None):
         self.lstm_size = lstm_size
         self.embedding_size = embedding_size
         self.vocab_size = vocab_size
@@ -59,6 +60,7 @@ class CombinedEncoder(Encoder):
 class Decoder(tfk.Model):
     def __init__(self, config: Config):
         super(Decoder, self).__init__()
+        assert config.attention_size is not None
         self.config = config
         self.embedding = Embedding(config.vocab_size,
                                    config.embedding_size,
@@ -214,3 +216,9 @@ class MultipleAttention(tfk.layers.Layer):
             alignments.append(alignment)
 
         return tf.concat(outputs, axis=-1), alignments
+
+
+def loss_function(real, pred):
+    mask = 1 - np.equal(real, 0)
+    loss_ = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=real, logits=pred)
+    return loss_ * mask

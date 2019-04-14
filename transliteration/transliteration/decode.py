@@ -178,8 +178,8 @@ def deintern_decode_results(interned_results, to_script):
         result = []
         for j in range(interned_results.shape[1]):
             result_str = []
-            for interned_token in interned_results[i, j]:
-                token = SCRIPTS[to_script].deintern_char(interned_token)
+            for t in interned_results[i, j]:
+                token = SCRIPTS[to_script].deintern_char(t)
                 if token == '<end>':
                     break
                 result_str.append(token)
