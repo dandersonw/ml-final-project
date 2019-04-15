@@ -63,7 +63,7 @@ def transfer_learning_setup(*,
     decoder_config = model_one.Config(**decoder_config)
 
     encoder = model_one.Encoder(encoder_config)
-    decoder_initial = model_one.Decoder(decoder_config)
+    decoder_initial = model_one.Decoder(decoder_config_initial)
     decoder = model_one.Decoder(decoder_config)
 
     train.exercise_encoder_decoder(encoder=encoder,

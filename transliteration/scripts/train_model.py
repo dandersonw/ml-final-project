@@ -92,13 +92,15 @@ def train_model(*,
                                                      decoder_config=decoder_config,
                                                      from_script=from_script,
                                                      transfer_to_script=transfer_to_script,
-                                                     to_script=transfer_to_script)
+                                                     to_script=to_script)
         models_ = {**models, **{'decoder': models['decoder_initial']}}
         train.normal_training_regimen(train_data=transfer_train_data,
                                       valid_data=transfer_valid_data,
                                       from_script=from_script,
                                       to_script=transfer_to_script,
                                       models=models_)
+        for layer in models['encoder'].layers:
+            layer.trainable = False
     else:
         models = model_setup.normal_setup(encoder_config=encoder_config,
                                           decoder_config=decoder_config,
