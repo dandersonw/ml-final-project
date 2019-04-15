@@ -54,6 +54,7 @@ def main():
                                        batch_size=args.batch_size)
         if best_val_loss is None or val_loss < best_val_loss:
             model_setup.save_weights_to_pkl(models, args.save_path)
+            best_val_loss = val_loss
     print('Best validation loss: {:.3f}'.format(best_val_loss))
 
 
