@@ -1,6 +1,8 @@
 \documentclass{beamer}
  
 \usepackage[utf8]{inputenc}
+\usepackage{xeCJK}
+\setCJKmainfont{IPAMincho}
  
  
 \title{Learning Transliteration without Parallel Data}
@@ -16,10 +18,36 @@
 \begin{frame}
   \frametitle{Project Idea}
 
+  \begin{itemize}
+  \item Transliterate from English to Japanese without parallel data
+  \item Do that using recent work on word translation without parallel data
+  \end{itemize}
+
 \end{frame}
 
 \begin{frame}
   \frametitle{Background - Transliteration}
+
+  \begin{itemize}
+  \item To represent a word in a script different from that it was originally
+    written in
+  \item For some script pairs it's easy
+    \begin{itemize}
+      \item Middle English alphabet ``þe'' -> Modern English alphabet ``the''
+    \end{itemize}
+
+  \item For some script pairs it requires some interpretation
+    \begin{itemize}
+    \item In Japanese, primarily approximate pronunciation but also consider
+      spelling
+    \item Key for our project: transliterated words are written in a specific
+      script called katakana (in modern times anyway)
+    \item E.x: Edinburgh -> エディンバラ, Boston -> ボストン
+    \end{itemize}
+
+  \item Usually learning transliteration requires at least parallel data,
+    i.e. text which means the same thing in both scripts of interest
+  \end{itemize}
 
 \end{frame}
 
@@ -30,10 +58,25 @@
 
 \begin{frame}
   \frametitle{Method}
+  \begin{itemize}
+  \item Learn word translations from Japanese to English
+  \item Find the English translations of Japanese katakana words
+  \item Train the transliteration model on those pairs
+    \begin{itemize}
+    \item Our transliteration model is bog-standard: an RNN encoder-decoder with
+      attention
+    \end{itemize}
+  \item Evaluate on katakana pairs from a dictionary Facebook Research provides
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Results}
+  \begin{itemize}
+  \item TODO: word translation doesn't work expalanation
+  \item Learning on translation pairs we generate get's us to 0.5\% accuracy,
+    adding in transfer learning pushes that to 1.2\%.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -48,5 +91,6 @@
 \end{document}
 %%% Local Variables:
 %%% mode: latex
+%%% TeX-engine: xetex
 %%% TeX-master: t
 %%% End:
