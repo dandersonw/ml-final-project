@@ -1,8 +1,11 @@
-import unidecode
-import unicodedata
+import pandas as pd
+import numpy as np
 
 import abc
+import itertools
 import pkg_resources
+import unidecode
+import unicodedata
 
 NUM_SPECIAL_TOKENS = 3
 KATAKANA_BLOCK_START = 0x30A0
@@ -37,6 +40,40 @@ class Script(abc.ABC):
     @property
     @abc.abstractmethod
     def _vocab_size():
+        pass
+
+    @property
+    def ins_cost(self):
+        """Cost to insert or delete a character (for edit distance).
+
+        N.B: indices are the script subclass indices
+
+        """
+        if type(self._ins_cost) is str and self._ins_cost == 'default':
+            return np.ones([self._vocab_size],
+                           dtype=np.float32)
+        return self._ins_cost
+
+    @property
+    @abc.abstractmethod
+    def _ins_cost():
+        pass
+
+    @property
+    def sub_cost(self):
+        """Cost to substitute a character for another (for edit distance).
+
+        N.B: indices are the script subclass indices
+
+        """
+        if type(self._sub_cost) is str and self._sub_cost == 'default':
+            return np.ones([self._vocab_size, self._vocab_size],
+                           dtype=np.float32)
+        return self._sub_cost
+
+    @property
+    @abc.abstractmethod
+    def _sub_cost():
         pass
 
     def _intern_special(self, char):
@@ -99,6 +136,8 @@ class English(Script):
     special_dict = {k: i + 26 for i, k in enumerate({' '})}
     reverse_special_dict = {i: k for k, i in special_dict.items()}
     _vocab_size = 26 + len(special_dict)
+    _ins_cost = 'default'
+    _sub_cost = 'default'
 
     def _char_in_range(self, char):
         return (ord(char) <= ord('z') and ord(char) >= ord('a')
@@ -120,11 +159,45 @@ class English(Script):
         return lower
 
 
+def _katakana_ins_cost():
+    r = np.ones([KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1], np.float32)
+    half_cost = {'ッ', 'ー'}
+    for c in half_cost:
+        r[ord(c) - KATAKANA_BLOCK_START] = 0.5
+    return r
+
+
+def _katakana_sub_cost():
+    size = KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1
+    r = np.ones([size, size], np.float32)
+    table = pd.read_csv(pkg_resources.resource_stream('transliteration.resources',
+                                                      'katakana-table.csv'),
+                        index_col='cons')
+    for cons, row in table.iterrows():
+        if cons == '∅':  # vowel mora
+            continue
+        row = row[pd.notnull(row)]
+        for a, b in itertools.permutations(row, 2):
+            a = ord(a) - KATAKANA_BLOCK_START
+            b = ord(b) - KATAKANA_BLOCK_START
+            r[a, b] = 0.5
+    for vowel, row in table.T.iterrows():
+        row = row[pd.notnull(row)]
+        row = row.drop('∅')
+        for a, b in itertools.permutations(row, 2):
+            a = ord(a) - KATAKANA_BLOCK_START
+            b = ord(b) - KATAKANA_BLOCK_START
+            r[a, b] = 0.5
+    return r
+
+
 class Katakana(Script):
     id_code = 'ja'
     join_char = ''
     word_separator_char = ''
     _vocab_size = KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1
+    _ins_cost = _katakana_ins_cost()
+    _sub_cost = _katakana_sub_cost()
 
     def _char_in_range(self, char):
         return (ord(char) >= KATAKANA_BLOCK_START
@@ -151,6 +224,8 @@ class CMUPronunciation(Script):
                              .split('\n'))}
     reverse_intern_dict = {v: k for k, v in intern_dict.items()}
     _vocab_size = len(intern_dict)
+    _ins_cost = 'default'
+    _sub_cost = 'default'
 
     def _char_in_range(self, char):
         return char in self.intern_dict
