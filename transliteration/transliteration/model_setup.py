@@ -12,15 +12,15 @@ def normal_setup(*,
                  to_script):
     optimizer = tf.train.AdamOptimizer()
 
-    encoder_config = {**encoder_config,
-                      **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
-    encoder_config = model_one.Config(**encoder_config)
-    decoder_config = {**decoder_config,
-                      **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
-    decoder_config = model_one.Config(**decoder_config)
+    config_keys = {**encoder_config,
+                   **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
+    encoder_config_obj = model_one.Config(**config_keys)
+    config_keys = {**decoder_config,
+                   **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
+    decoder_config_obj = model_one.Config(**config_keys)
 
-    encoder = model_one.Encoder(encoder_config)
-    decoder = model_one.Decoder(decoder_config)
+    encoder = model_one.Encoder(encoder_config_obj)
+    decoder = model_one.Decoder(decoder_config_obj)
 
     # get at least the main variables set up
     train.exercise_encoder_decoder(encoder=encoder,
@@ -32,9 +32,13 @@ def normal_setup(*,
                                    encoder=encoder,
                                    decoder=decoder)
 
-    return {'optimizer': optimizer,
+    return {'setup': 'normal',
+            'from_script': from_script,
+            'to_script': to_script,
+            'optimizer': optimizer,
             'encoder': encoder,
             'decoder': decoder,
+            'config': {'encoder': encoder_config, 'decoder': decoder_config},
             'make_checkpoint_obj': make_checkpoint_obj,
             'loss_function': model_one.loss_function}
 
@@ -42,9 +46,12 @@ def normal_setup(*,
 def transfer_learning_setup(*,
                             encoder_config,
                             decoder_config,
+                            transfer_encoder_config,
+                            transfer_decoder_config,
                             from_script,
                             transfer_to_script,
-                            to_script):
+                            to_script,
+                            style='default'):
     """First train on from_script -> transfer_to_script, then transfer the encoder to
     from_script -> to_script.
 
@@ -52,50 +59,175 @@ def transfer_learning_setup(*,
 
     optimizer = tf.train.AdamOptimizer()
 
-    encoder_config = {**encoder_config,
-                      **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
-    encoder_config = model_one.Config(**encoder_config)
-    decoder_config_initial = {**decoder_config,
-                              **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
-    decoder_config_initial = model_one.Config(**decoder_config_initial)
-    decoder_config = {**decoder_config,
-                      **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
-    decoder_config = model_one.Config(**decoder_config)
+    if style == 'default':
+        transfer_setup = _default_transfer_setup
+    elif style == 'stacked':
+        transfer_setup = _stacked_transfer_setup
 
-    encoder = model_one.Encoder(encoder_config)
-    decoder_initial = model_one.Decoder(decoder_config_initial)
-    decoder = model_one.Decoder(decoder_config)
+    initial, main =\
+        transfer_setup(from_script=from_script,
+                       encoder_config=encoder_config,
+                       decoder_config=decoder_config,
+                       transfer_encoder_config=transfer_encoder_config,
+                       transfer_decoder_config=transfer_decoder_config,
+                       optimizer=optimizer,
+                       to_script=to_script,
+                       transfer_to_script=transfer_to_script)
 
-    train.exercise_encoder_decoder(encoder=encoder,
-                                   decoder=decoder_initial,
-                                   to_script=transfer_to_script)
-    train.exercise_encoder_decoder(encoder=encoder,
-                                   decoder=decoder,
-                                   to_script=to_script)
+    for setup in [initial, main]:
+        train.exercise_encoder_decoder(encoder=setup['encoder'],
+                                       decoder=setup['decoder'],
+                                       to_script=transfer_to_script)
+        setup['loss_function'] = model_one.loss_function
+        setup['optimizer'] = optimizer
+
+    return initial, main
+
+
+def _default_transfer_setup(*,
+                            from_script,
+                            encoder_config,
+                            decoder_config,
+                            transfer_encoder_config,
+                            transfer_decoder_config,
+                            to_script,
+                            optimizer,
+                            transfer_to_script):
+    config_keys = {**transfer_decoder_config,
+                   **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
+    t_decoder_config_obj = model_one.Config(**config_keys)
+    transfer_decoder = model_one.Decoder(t_decoder_config_obj)
+
+    config_keys = {**encoder_config,
+                   **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
+    encoder_config_obj = model_one.Config(**config_keys)
+    config_keys = {**decoder_config,
+                   **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
+    decoder_config_obj = model_one.Config(**config_keys)
+    encoder = model_one.Encoder(encoder_config_obj)
+    decoder = model_one.Decoder(decoder_config_obj)
 
     def make_checkpoint_obj():
-        # we will want to rerun this when the graph changes,
-        # so make it a thunk
         return tf.train.Checkpoint(optimizer=optimizer,
                                    encoder=encoder,
-                                   decoder_initial=decoder_initial,
+                                   transfer_decoder=transfer_decoder,
                                    decoder=decoder)
 
-    return {'optimizer': optimizer,
+    initial = {'setup': 'normal',
+               'encoder': encoder,
+               'decoder': transfer_decoder,
+               'from_script': from_script,
+               'to_script': transfer_to_script,
+               'make_checkpoint_obj': make_checkpoint_obj,
+               'config': {'encoder': encoder_config,
+                          'decoder': transfer_decoder_config}}
+    main = {'setup': 'normal',
             'encoder': encoder,
-            'decoder_initial': decoder_initial,
             'decoder': decoder,
+            'from_script': from_script,
+            'to_script': to_script,
             'make_checkpoint_obj': make_checkpoint_obj,
-            'loss_function': model_one.loss_function}
+            'config': {'encoder': encoder_config,
+                       'decoder': decoder_config}}
+    return initial, main
 
 
-def save_weights_to_pkl(models, save_path):
-    saved_weights = {m: models[m].get_weights()
-                     for m in {'encoder', 'decoder'}}
-    pickle.dump(saved_weights, open(save_path, mode='wb'))
+def _stacked_transfer_setup(*,
+                            from_script,
+                            transfer_encoder_config,
+                            transfer_decoder_config,
+                            encoder_config,
+                            decoder_config,
+                            to_script,
+                            optimizer,
+                            transfer_to_script):
+    config_keys = {**encoder_config,
+                   **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
+    t_encoder_config_obj = model_one.Config(**config_keys)
+    transfer_encoder = model_one.Encoder(t_encoder_config_obj)
+    config_keys = {**transfer_decoder_config,
+                   **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
+    t_decoder_config_obj = model_one.Config(**config_keys)
+    transfer_decoder = model_one.Decoder(t_decoder_config_obj)
+    encoder = model_one.StackedEncoderDecoderEncoder(transfer_encoder,
+                                                     transfer_decoder,
+                                                     transfer_to_script)
+    config_keys = {**decoder_config,
+                   **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
+    decoder_config_obj = model_one.Config(**config_keys)
+    decoder = model_one.Decoder(decoder_config_obj)
+
+    def make_checkpoint_obj():
+        return tf.train.Checkpoint(optimizer=optimizer,
+                                   transfer_encoder=transfer_encoder,
+                                   transfer_decoder=transfer_decoder,
+                                   encoder=encoder,
+                                   decoder=decoder)
+
+    initial = {'setup': 'normal',
+               'encoder': transfer_encoder,
+               'decoder': transfer_decoder,
+               'from_script': from_script,
+               'to_script': transfer_to_script,
+               'make_checkpoint_obj': make_checkpoint_obj,
+               'config': {'encoder': transfer_encoder_config,
+                          'decoder': transfer_decoder_config}}
+    main = {'setup': 'stacked',
+            'encoder': encoder,
+            'decoder': decoder,
+            'transfer_encoder': transfer_encoder,
+            'transfer_decoder': transfer_decoder,
+            'from_script': from_script,
+            'to_script': to_script,
+            'transfer_to_script': transfer_to_script,
+            'make_checkpoint_obj': make_checkpoint_obj,
+            'config': {'encoder': encoder_config,
+                       'decoder': decoder_config,
+                       'transfer_encoder': transfer_encoder_config,
+                       'transfer_decoder': transfer_decoder_config}}
+    return initial, main
 
 
-def load_weights_from_pkl(models, save_path):
-    saved_weights = pickle.load(open(save_path, mode='rb'))
-    for m in {'encoder', 'decoder'}:
-        models[m].set_weights(saved_weights[m])
+def save_to_pkl(setup, save_path):
+    additional_dump = dict()
+    setup_style = setup['setup']
+    if setup_style == 'normal':
+        saved_models = {'encoder', 'decoder'}
+    elif setup_style == 'stacked':
+        saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
+        additional_dump['transfer_to_script'] = setup['transfer_to_script']
+
+    saved_weights = {m: setup[m].get_weights()
+                     for m in saved_models}
+    to_dump = {**{'setup': setup['setup'],
+                  'weights': saved_weights,
+                  'config': setup['config'],
+                  'from_script': setup['from_script'],
+                  'to_script': setup['to_script']},
+               **additional_dump}
+    pickle.dump(to_dump, open(save_path, mode='wb'))
+
+
+def load_from_pkl(save_path):
+    dump = pickle.load(open(save_path, mode='rb'))
+    setup_style = dump['setup']
+    if setup_style == 'normal':
+        saved_models = {'encoder', 'decoder'}
+        result = normal_setup(encoder_config=dump['config']['encoder'],
+                              decoder_config=dump['config']['decoder'],
+                              from_script=dump['from_script'],
+                              to_script=dump['to_script'])
+    elif setup_style == 'stacked':
+        saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
+        _, result = transfer_learning_setup(encoder_config=dump['config']['encoder'],
+                                            decoder_config=dump['config']['decoder'],
+                                            transfer_encoder_config=dump['config']['transfer_encoder'],
+                                            transfer_decoder_config=dump['config']['transfer_decoder'],
+                                            from_script=dump['from_script'],
+                                            to_script=dump['to_script'],
+                                            transfer_to_script=dump['transfer_to_script'],
+                                            style='stacked')
+    saved_weights = dump['weights']
+    for m in saved_models:
+        result[m].set_weights(saved_weights[m])
+    return result

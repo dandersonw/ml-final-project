@@ -77,7 +77,7 @@ def beam_search_decode(*,
                                    encoder_output)
 
         # compute the probability of each new hypothesis
-        pred = -1 * np.log(tf.nn.softmax(pred)) # convert logits to neg log prob
+        pred = -1 * np.log(tf.nn.softmax(pred))  # convert logits to neg log prob
         pred = np.reshape(pred, [batch_size, num_beams, vocab_size])
         pred[done] = must_be_pad
         prob = pred + np.expand_dims(hyp_prob, 2)  # add the prob of the parent

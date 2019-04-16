@@ -110,8 +110,6 @@ class StackedEncoderDecoderEncoder(tfk.layers.Layer):
                                         to_script=self.decoder_script,
                                         k_best=1)
         decoder_out = tf.squeeze(decoder_out, axis=-2)
-        # decoder_state = decode._my_struct_map(lambda e: tf.squeeze(e, axis=1),
-        #                                       decoder_state)
         decoder_out = self.decoder.embedding(decoder_out)
         return (encoder_out, decoder_out), encoder_state
 

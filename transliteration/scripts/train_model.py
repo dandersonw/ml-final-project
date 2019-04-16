@@ -19,6 +19,7 @@ def main():
                         help='Train data in TFRecord format')
     parser.add_argument('--transfer-valid-data',
                         help='Validation data in TFRecord format')
+    parser.add_argument('--transfer-style', default='default')
     parser.add_argument('--data-kwargs', default='{}')
     parser.add_argument('--transfer-data-kwargs', default='{}')
     parser.add_argument('--from-script', required=True)
@@ -26,13 +27,21 @@ def main():
     parser.add_argument('--transfer-to-script')
     parser.add_argument('--encoder-config', required=True)
     parser.add_argument('--decoder-config', required=True)
+    parser.add_argument('--transfer-encoder-config')
+    parser.add_argument('--transfer-decoder-config')
     parser.add_argument('--save-path', required=True)
     parser.add_argument('--random-restarts', default=3, type=int)
     parser.add_argument('--batch-size', default=128, type=int)
     args = parser.parse_args()
 
     encoder_config = json.loads(args.encoder_config)
+    transfer_encoder_config = (encoder_config
+                               if args.transfer_encoder_config is None
+                               else json.loads(args.transfer_encoder_config))
     decoder_config = json.loads(args.decoder_config)
+    transfer_decoder_config = (decoder_config
+                               if args.transfer_decoder_config is None
+                               else json.loads(args.transfer_decoder_config))
     data_kwargs = json.loads(args.data_kwargs)
     transfer_data_kwargs = json.loads(args.transfer_data_kwargs)
 
@@ -46,6 +55,9 @@ def main():
                                        transfer_data_kwargs=transfer_data_kwargs,
                                        train_data=args.train_data,
                                        valid_data=args.valid_data,
+                                       transfer_style=args.transfer_style,
+                                       transfer_encoder_config=transfer_encoder_config,
+                                       transfer_decoder_config=transfer_decoder_config,
                                        transfer_train_data=args.transfer_train_data,
                                        transfer_valid_data=args.transfer_valid_data,
                                        from_script=args.from_script,
@@ -53,7 +65,7 @@ def main():
                                        transfer_to_script=args.transfer_to_script,
                                        batch_size=args.batch_size)
         if best_val_loss is None or val_loss < best_val_loss:
-            model_setup.save_weights_to_pkl(models, args.save_path)
+            model_setup.save_to_pkl(models, args.save_path)
             best_val_loss = val_loss
     print('Best validation loss: {:.3f}'.format(best_val_loss))
 
@@ -65,8 +77,11 @@ def train_model(*,
                 transfer_data_kwargs,
                 train_data,
                 valid_data,
+                transfer_style=None,
                 transfer_train_data=None,
                 transfer_valid_data=None,
+                transfer_encoder_config=None,
+                transfer_decoder_config=None,
                 from_script,
                 to_script,
                 transfer_to_script=None,
@@ -77,6 +92,9 @@ def train_model(*,
     if doing_transfer_learning:
         assert (transfer_valid_data is not None
                 and transfer_train_data is not None
+                and transfer_style is not None
+                and transfer_encoder_config is not None
+                and transfer_decoder_config is not None
                 and transfer_to_script is not None)
         transfer_train_data = data.make_dataset(transfer_train_data,
                                                 from_script=from_script,
@@ -88,19 +106,23 @@ def train_model(*,
                                                 to_script=transfer_to_script,
                                                 batch_size=batch_size,
                                                 **transfer_data_kwargs)
-        models = model_setup.transfer_learning_setup(encoder_config=encoder_config,
-                                                     decoder_config=decoder_config,
-                                                     from_script=from_script,
-                                                     transfer_to_script=transfer_to_script,
-                                                     to_script=to_script)
-        models_ = {**models, **{'decoder': models['decoder_initial']}}
+        initial_models, models = \
+            model_setup.transfer_learning_setup(encoder_config=encoder_config,
+                                                decoder_config=decoder_config,
+                                                transfer_encoder_config=transfer_encoder_config,
+                                                transfer_decoder_config=transfer_decoder_config,
+                                                style=transfer_style,
+                                                from_script=from_script,
+                                                transfer_to_script=transfer_to_script,
+                                                to_script=to_script)
         train.normal_training_regimen(train_data=transfer_train_data,
                                       valid_data=transfer_valid_data,
                                       from_script=from_script,
                                       to_script=transfer_to_script,
-                                      models=models_)
-        for layer in models['encoder'].layers:
-            layer.trainable = False
+                                      models=initial_models)
+        for m in {'encoder', 'decoder'}:
+            for layer in initial_models[m].layers:
+                layer.trainable = False
     else:
         models = model_setup.normal_setup(encoder_config=encoder_config,
                                           decoder_config=decoder_config,
