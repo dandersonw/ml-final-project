@@ -3,7 +3,6 @@ import numpy as np
 
 import argparse
 import json
-from itertools import chain
 
 from transliteration import model_setup, train, data, decode, evaluate
 
@@ -29,18 +28,11 @@ def main():
                                   batch_size=32,
                                   **data_kwargs)
 
-    from_strings = []
-    to_strings = []
-    for batch in test_data:
-        from_tokens = np.expand_dims(batch[from_script], 1)
-        to_tokens = np.expand_dims(batch[to_script], 1)
-        from_strings.append(decode.deintern_decode_results(from_tokens, from_script))
-        to_strings.append(decode.deintern_decode_results(to_tokens, to_script))
+    test_strings = decode.extract_strings_from_dataset(test_data,
+                                                       from_script,
+                                                       to_script)
 
-    from_strings = list(chain.from_iterable(chain.from_iterable(from_strings)))
-    to_strings = list(chain.from_iterable(chain.from_iterable(to_strings)))
-
-    predicted = decode.transliterate(input_strs=from_strings,
+    predicted = decode.transliterate(input_strs=test_strings[from_script],
                                      from_script=from_script,
                                      to_script=to_script,
                                      encoder=setup['encoder'],
@@ -49,12 +41,22 @@ def main():
                                      num_beams=10,
                                      k_best=5)
 
-    acc_at_1 = evaluate.top_k_accuracy(to_strings, predicted, k=1)
-    acc_at_5 = evaluate.top_k_accuracy(to_strings, predicted, k=5)
-    mrr_at_5 = evaluate.mrr(to_strings, predicted, k=5)
+    acc_at_1 = evaluate.top_k_accuracy(test_strings[to_script],
+                                       predicted,
+                                       k=1)
+    acc_at_5 = evaluate.top_k_accuracy(test_strings[to_script],
+                                       predicted,
+                                       k=5)
+    mrr_at_5 = evaluate.mrr(test_strings[to_script],
+                            predicted,
+                            k=5)
+    cee = evaluate.character_error_rate(test_strings[to_script],
+                                        predicted,
+                                        script_name=to_script)
     print('Accuracy at k=1: {:.3f}'.format(acc_at_1))
     print('Accuracy at k=5: {:.3f}'.format(acc_at_5))
     print('MRR at k=5: {:.3f}'.format(mrr_at_5))
+    print('Character error rate: {:.3f}'.format(cee))
 
     loss = train.run_one_epoch(test_data,
                                False,

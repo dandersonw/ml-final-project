@@ -30,6 +30,17 @@ def mrr(gold, pred, k=5):
     return rr / count
 
 
+def character_error_rate(gold, pred, *, script_name):
+    length_sum = 0
+    error_sum = 0
+    pred_strs, pred_weights = pred
+    for g, p in zip(gold, pred_strs):
+        p = p[0]  # only consider the top choice
+        length_sum += len(g)
+        error_sum += edit_distance(g, p, script_name=script_name)
+    return error_sum / length_sum
+
+
 def edit_distance(a, b, *, script_name):
     scriptt = SCRIPTS[script_name]
     assert(all(scriptt._char_in_range(c) for c in a))
@@ -44,7 +55,7 @@ def edit_distance(a, b, *, script_name):
 
 @numba.jit(nopython=True)
 def _edit_distance(i, j, sa, sb, dp, ins_cost, sub_cost):
-    if i >= len(sa) and j >= len(sa):
+    if i >= len(sa) and j >= len(sb):
         return 0
     if np.isnan(dp[i, j]):
         min_cost = np.inf
@@ -63,5 +74,6 @@ def _edit_distance(i, j, sa, sb, dp, ins_cost, sub_cost):
                 sub = (sub_cost[sb[j], sa[i]]
                        + _edit_distance(i + 1, j + 1, sa, sb, dp, ins_cost, sub_cost))
             min_cost = min(min_cost, sub)
+        assert min_cost != np.inf
         dp[i, j] = min_cost
     return dp[i, j]

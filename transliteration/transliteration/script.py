@@ -163,7 +163,9 @@ def _katakana_ins_cost():
     r = np.ones([KATAKANA_BLOCK_END - KATAKANA_BLOCK_START + 1], np.float32)
     half_cost = {'ッ', 'ー'}
     for c in half_cost:
-        r[ord(c) - KATAKANA_BLOCK_START] = 0.5
+        c = ord(c)
+        assert c <= KATAKANA_BLOCK_END
+        r[c - KATAKANA_BLOCK_START] = 0.5
     return r
 
 
@@ -175,6 +177,11 @@ def _katakana_sub_cost():
                         index_col='cons')
     for cons, row in table.iterrows():
         if cons == '∅':  # vowel mora
+            for vowel in row:
+                vowel = ord(vowel) - KATAKANA_BLOCK_START
+                b = ord('ー') - KATAKANA_BLOCK_START
+                r[vowel, b] = 0.5  # this discount is kind of arguable
+                r[b, vowel] = 0.5
             continue
         row = row[pd.notnull(row)]
         for a, b in itertools.permutations(row, 2):
@@ -188,6 +195,7 @@ def _katakana_sub_cost():
             a = ord(a) - KATAKANA_BLOCK_START
             b = ord(b) - KATAKANA_BLOCK_START
             r[a, b] = 0.5
+
     return r
 
 

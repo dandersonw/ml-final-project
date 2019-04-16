@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
+from itertools import chain
+
 from .script import SCRIPTS
 
 
@@ -253,3 +255,14 @@ def _my_struct_zip(a, b):
                 yield e
     else:
         yield (a, b)
+
+
+def extract_strings_from_dataset(dataset, *script_names):
+    strings = {s: [] for s in script_names}
+    for batch in dataset:
+        for s in script_names:
+            tokens = np.expand_dims(batch[s], 1)
+            strings[s].append(deintern_decode_results(tokens, s))
+    strings = {k: list(chain.from_iterable(chain.from_iterable(v)))
+               for k, v in strings.items()}
+    return strings
