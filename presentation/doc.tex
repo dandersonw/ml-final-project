@@ -3,6 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{xeCJK}
 \setCJKmainfont{IPAMincho}
+\graphicspath{ {images/} }
  
  
 \title{Learning Transliteration without Parallel Data}
@@ -53,6 +54,23 @@
 
 \begin{frame}
   \frametitle{Background - Word Translation w/o Parallel Data}
+  Conneau et al propose the following for unsupervised word translation:
+  \begin{itemize}
+    \item A domain-adversarial approach to minimize $\|WX-Y\|_2$ where $W$ is
+      a linear mapping and $X,Y$ are monolingual word embeddings.
+    \item A refinement procedure where a synthetic vocabulary is constructed
+      with the learned $W$ to apply the Procrustes solution (i.e.
+      min $\|WX-Y\|_2 = SVD(YX^T)$).
+      \begin{itemize}
+        \item This can be used with ground truth data as a supervised
+          approach as well.
+      \end{itemize}
+    \item A similarity measure for word translation which mitigates hubs in
+      nearest-neighbor graphs. In this case, target words that are translations
+      for many source words.
+    \item An unsupervised validation criterion for model selection: mean
+      cosine similarity between translations of most frequent 10,000 words.
+  \end{itemize}
 
 \end{frame}
 
@@ -60,7 +78,8 @@
   \frametitle{Method}
   \begin{itemize}
   \item Learn word translations from Japanese to English
-  \item Find the English translations of Japanese katakana words
+  \item Find the English translations of Japanese katakana words by translating
+    the most frequent words in the Japanese embedding vocabulary.
   \item Train the transliteration model on those pairs
     \begin{itemize}
     \item Our transliteration model is bog-standard: an RNN encoder-decoder with
@@ -73,7 +92,18 @@
 \begin{frame}
   \frametitle{Results}
   \begin{itemize}
-  \item TODO: word translation doesn't work expalanation
+  \item Japanese-English word translation does not work: Purely unsupervised
+    approach gets 0 precision at k=1, supervised approach gets 7.72 precision
+    at k=1.
+    \begin{itemize}
+    \item The domain-adversarial approach is highly sensitive to hyper-parameters.
+    \item The model selection metric correlates less with word translation
+      accuracy as languages get further apart.
+    \item The Japanese word embedding tokens seem to be noisy to begin with.
+    \end{itemize}
+  \item While Conneau et al's approach aims to mitigate hubs, we do not have
+    sufficient resources to hold the entire vocabulary in memory, causing many
+    words to be incorrectly translated as adverbs, prepositions, etc.
   \item Learning on translation pairs we generate get's us to 0.5\% accuracy,
     adding in transfer learning pushes that to 1.2\%.
   \end{itemize}
@@ -81,12 +111,46 @@
 
 \begin{frame}
   \frametitle{Fallback Exploration - Timothy}
+  How well does the unsupervised metric correlate with word translation accuracy?
+  \begin{itemize}
+  \item Conneau et al. claim it correlates well, however they only show one example
+    as proof without specifying the language pair.
+  \end{itemize}
+  \begin{columns}
+    \column{0.5\textwidth}
+    \begin{table}
+      \begin{tabular}{l | c }
+      Language & $\text{R}^2$ \\
+      \hline \hline
+      Spanish & 0.8581 \\
+      Korean & 0.7754 \\
+      French & 0.7722 \\
+      Chinese & 0.0237 \\
+      Japanese & -0.2715
+      \end{tabular}
+    \end{table}
+    \column{0.5\textwidth}
+      \frame{\includegraphics[width=\textwidth]{spanishCorr}} \\
+      \frame{\includegraphics[width=\textwidth]{japaneseCorr}}
+  \end{columns}
 \end{frame}
 
 \begin{frame}
   \frametitle{Fallback Exploration - Derick}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Conclusions}
+  \begin{itemize}
+  \item Conneau et al.'s unsupervised word translation approach completely fails
+    with the Japanese-English language pair.
+  \item Their proposed similarity metric only correlates well with accuracy when
+    the source/target languages are similar.
+  \item TODO: The translation data generated from the word translation model are
+    too noisy for our transliteration method to work
+  \item TODO: Something about Derick's fallback exploration??
+  \end{itemize}
+\end{frame}
 
 \end{document}
 %%% Local Variables:
