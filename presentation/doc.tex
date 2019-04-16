@@ -32,12 +32,12 @@
   \begin{itemize}
   \item To represent a word in a script different from that it was originally
     written in
-  \item For some script pairs it's easy
+  \item For some script pairs it's as easy as a table lookup
     \begin{itemize}
-      \item Middle English alphabet ``þe'' -> Modern English alphabet ``the''
+      \item E.x. Middle English alphabet ``þe'' -> Modern English alphabet ``the''
     \end{itemize}
 
-  \item For some script pairs it requires some interpretation
+  \item For some script pairs it requires some thinking
     \begin{itemize}
     \item In Japanese, primarily approximate pronunciation but also consider
       spelling
@@ -82,7 +82,7 @@
     the most frequent words in the Japanese embedding vocabulary.
   \item Train the transliteration model on those pairs
     \begin{itemize}
-    \item Our transliteration model is bog-standard: an RNN encoder-decoder with
+    \item Our transliteration model is straightforward: an RNN encoder-decoder with
       attention
     \end{itemize}
   \item Evaluate on katakana pairs from a dictionary Facebook Research provides
@@ -137,6 +137,19 @@
 
 \begin{frame}
   \frametitle{Fallback Exploration - Derick}
+  \begin{itemize}
+  \item English -> Japanese transliteration is affected by both the spelling and
+    pronunciation of the English word
+  \item The neural transliteration paper
+    \footnote{https://arxiv.org/abs/1610.09565} we use as a baseline only
+    incorporates the written form of a word
+  \item Can we improve transliteration accuracy with a multi-task learning
+    setup of also predicting the pronunciation of a word?
+  \item Yes, we can: informal results suggest an about 6\% accuracy jump (from
+    the mid-forties).
+  \item Formal results on the accuracy benefit and an analysis of the best way
+    to do the multi-task learning are in process
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -146,9 +159,10 @@
     with the Japanese-English language pair.
   \item Their proposed similarity metric only correlates well with accuracy when
     the source/target languages are similar.
-  \item TODO: The translation data generated from the word translation model are
-    too noisy for our transliteration method to work
-  \item TODO: Something about Derick's fallback exploration??
+  \item The translation data generated from the word translation model are too
+    noisy for our model to learn transliteration
+  \item Multi-task learning to also predict the pronunciation of an English word
+    improves the accuracy of English -> Japanese transliteration
   \end{itemize}
 \end{frame}
 
