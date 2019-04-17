@@ -2,7 +2,6 @@ import tensorflow as tf
 
 import argparse
 import json
-import dill as pickle
 
 from transliteration import model_setup, train, data
 
@@ -120,9 +119,6 @@ def train_model(*,
                                       from_script=from_script,
                                       to_script=transfer_to_script,
                                       models=initial_models)
-        for m in {'encoder', 'decoder'}:
-            for layer in initial_models[m].layers:
-                layer.trainable = False
     else:
         models = model_setup.normal_setup(encoder_config=encoder_config,
                                           decoder_config=decoder_config,

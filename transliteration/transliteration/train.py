@@ -5,6 +5,7 @@ import contextlib
 import tempfile
 
 from .script import SCRIPTS
+from . import decode, evaluate
 
 
 def train_one_batch(*,
@@ -107,6 +108,9 @@ def normal_training_regimen(*,
                             to_script,
                             patience=3):
     with tempfile.TemporaryDirectory() as tempdir:
+        strings = decode.extract_strings_from_dataset(valid_data,
+                                                      from_script,
+                                                      to_script)
         best_val_loss = None
         early_stop_checkpoint = None
         checkpoint_obj = None
@@ -117,6 +121,8 @@ def normal_training_regimen(*,
             e += 1
             loss = run_one_epoch(train_data,
                                  True,
+                                 train_encoder=models['trainable']['encoder'],
+                                 train_decoder=models['trainable']['decoder'],
                                  from_script=from_script,
                                  to_script=to_script,
                                  encoder=models['encoder'],
@@ -130,16 +136,30 @@ def normal_training_regimen(*,
                                      encoder=models['encoder'],
                                      decoder=models['decoder'],
                                      loss_function=models['loss_function'])
+            predicted = decode.transliterate(input_strs=strings[from_script],
+                                             from_script=from_script,
+                                             to_script=to_script,
+                                             encoder=models['encoder'],
+                                             decoder=models['decoder'],
+                                             decoding_method=decode.beam_search_decode,
+                                             num_beams=10,
+                                             k_best=5)
+            acc_at_1 = evaluate.top_k_accuracy(strings[to_script],
+                                               predicted,
+                                               k=1)
+            acc_at_5 = evaluate.top_k_accuracy(strings[to_script],
+                                               predicted,
+                                               k=5)
             if checkpoint_obj is None:
                 # have to do so after the graph is built up by using the models
                 checkpoint_obj = models['make_checkpoint_obj']()
-            if best_val_loss is None or val_loss < best_val_loss:
+            if best_val_loss is None or acc_at_1 > best_val_loss:
                 best_e = e
-                best_val_loss = val_loss
+                best_val_loss = acc_at_1
                 early_stop_checkpoint = checkpoint_obj.save(file_prefix='{}/{}'
                                                             .format(tempdir, e))
-            print("Epoch {}: Train Loss {:.3f}, Valid Loss {:.3f}"
-                  .format(e, loss, val_loss))
+            print("Epoch {}: Train Loss {:.3f}, Valid Loss {:.3f}, acc@1: {:.3f}, acc@5: {:.3f}"
+                  .format(e, loss, val_loss, acc_at_1, acc_at_5))
 
         checkpoint_obj.restore(early_stop_checkpoint).assert_consumed()
         val_loss = run_one_epoch(valid_data,

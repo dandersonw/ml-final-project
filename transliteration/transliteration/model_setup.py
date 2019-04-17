@@ -39,6 +39,7 @@ def normal_setup(*,
             'encoder': encoder,
             'decoder': decoder,
             'config': {'encoder': encoder_config, 'decoder': decoder_config},
+            'trainable': {'encoder': True, 'decoder': True},
             'make_checkpoint_obj': make_checkpoint_obj,
             'loss_function': model_one.loss_function}
 
@@ -77,7 +78,7 @@ def transfer_learning_setup(*,
     for setup in [initial, main]:
         train.exercise_encoder_decoder(encoder=setup['encoder'],
                                        decoder=setup['decoder'],
-                                       to_script=transfer_to_script)
+                                       to_script=setup['to_script'])
         setup['loss_function'] = model_one.loss_function
         setup['optimizer'] = optimizer
 
@@ -116,6 +117,7 @@ def _default_transfer_setup(*,
     initial = {'setup': 'normal',
                'encoder': encoder,
                'decoder': transfer_decoder,
+               'trainable': {'encoder': True, 'decoder': True},
                'from_script': from_script,
                'to_script': transfer_to_script,
                'make_checkpoint_obj': make_checkpoint_obj,
@@ -124,6 +126,7 @@ def _default_transfer_setup(*,
     main = {'setup': 'normal',
             'encoder': encoder,
             'decoder': decoder,
+            'trainable': {'encoder': False, 'decoder': True},
             'from_script': from_script,
             'to_script': to_script,
             'make_checkpoint_obj': make_checkpoint_obj,
@@ -141,7 +144,7 @@ def _stacked_transfer_setup(*,
                             to_script,
                             optimizer,
                             transfer_to_script):
-    config_keys = {**encoder_config,
+    config_keys = {**transfer_encoder_config,
                    **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
     t_encoder_config_obj = model_one.Config(**config_keys)
     transfer_encoder = model_one.Encoder(t_encoder_config_obj)
@@ -167,6 +170,7 @@ def _stacked_transfer_setup(*,
     initial = {'setup': 'normal',
                'encoder': transfer_encoder,
                'decoder': transfer_decoder,
+               'trainable': {'encoder': True, 'decoder': True},
                'from_script': from_script,
                'to_script': transfer_to_script,
                'make_checkpoint_obj': make_checkpoint_obj,
@@ -175,8 +179,9 @@ def _stacked_transfer_setup(*,
     main = {'setup': 'stacked',
             'encoder': encoder,
             'decoder': decoder,
-            'transfer_encoder': transfer_encoder,
-            'transfer_decoder': transfer_decoder,
+            'trainable': {'encoder': False, 'decoder': True},
+            # 'transfer_encoder': transfer_encoder,
+            # 'transfer_decoder': transfer_decoder,
             'from_script': from_script,
             'to_script': to_script,
             'transfer_to_script': transfer_to_script,
@@ -191,10 +196,11 @@ def _stacked_transfer_setup(*,
 def save_to_pkl(setup, save_path):
     additional_dump = dict()
     setup_style = setup['setup']
+    saved_models = {'encoder', 'decoder'}
     if setup_style == 'normal':
-        saved_models = {'encoder', 'decoder'}
+        pass
     elif setup_style == 'stacked':
-        saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
+        # saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
         additional_dump['transfer_to_script'] = setup['transfer_to_script']
 
     saved_weights = {m: setup[m].get_weights()
@@ -211,14 +217,14 @@ def save_to_pkl(setup, save_path):
 def load_from_pkl(save_path):
     dump = pickle.load(open(save_path, mode='rb'))
     setup_style = dump['setup']
+    saved_models = {'encoder', 'decoder'}
     if setup_style == 'normal':
-        saved_models = {'encoder', 'decoder'}
         result = normal_setup(encoder_config=dump['config']['encoder'],
                               decoder_config=dump['config']['decoder'],
                               from_script=dump['from_script'],
                               to_script=dump['to_script'])
     elif setup_style == 'stacked':
-        saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
+        # saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
         _, result = transfer_learning_setup(encoder_config=dump['config']['encoder'],
                                             decoder_config=dump['config']['decoder'],
                                             transfer_encoder_config=dump['config']['transfer_encoder'],

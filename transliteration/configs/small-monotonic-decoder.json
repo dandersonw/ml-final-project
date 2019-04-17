@@ -1,0 +1,1 @@
+{"lstm_size": 120, "embedding_size": 30, "attention": "monotonic_bahdanau", "attention_size": 60}
