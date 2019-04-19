@@ -58,16 +58,6 @@ def main():
     print('MRR at k=5: {:.3f}'.format(mrr_at_5))
     print('Character error rate: {:.3f}'.format(cee))
 
-    loss = train.run_one_epoch(test_data,
-                               False,
-                               from_script=from_script,
-                               to_script=to_script,
-                               encoder=setup['encoder'],
-                               decoder=setup['decoder'],
-                               loss_function=setup['loss_function'])
-
-    print('Test Loss: {:.3f}'.format(loss))
-
 
 if __name__ == '__main__':
     tf.logging.set_verbosity('ERROR')

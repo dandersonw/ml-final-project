@@ -52,7 +52,7 @@ def transfer_learning_setup(*,
                             from_script,
                             transfer_to_script,
                             to_script,
-                            style='default'):
+                            style='normal'):
     """First train on from_script -> transfer_to_script, then transfer the encoder to
     from_script -> to_script.
 
@@ -60,8 +60,8 @@ def transfer_learning_setup(*,
 
     optimizer = tf.train.AdamOptimizer()
 
-    if style == 'default':
-        transfer_setup = _default_transfer_setup
+    if style == 'normal' or style == 'default':
+        transfer_setup = _normal_transfer_setup
     elif style == 'stacked':
         transfer_setup = _stacked_transfer_setup
 
@@ -85,15 +85,15 @@ def transfer_learning_setup(*,
     return initial, main
 
 
-def _default_transfer_setup(*,
-                            from_script,
-                            encoder_config,
-                            decoder_config,
-                            transfer_encoder_config,
-                            transfer_decoder_config,
-                            to_script,
-                            optimizer,
-                            transfer_to_script):
+def _normal_transfer_setup(*,
+                           from_script,
+                           encoder_config,
+                           decoder_config,
+                           transfer_encoder_config,
+                           transfer_decoder_config,
+                           to_script,
+                           optimizer,
+                           transfer_to_script):
     config_keys = {**transfer_decoder_config,
                    **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
     t_decoder_config_obj = model_one.Config(**config_keys)
@@ -126,7 +126,7 @@ def _default_transfer_setup(*,
     main = {'setup': 'normal',
             'encoder': encoder,
             'decoder': decoder,
-            'trainable': {'encoder': False, 'decoder': True},
+            'trainable': {'encoder': 3, 'decoder': True},
             'from_script': from_script,
             'to_script': to_script,
             'make_checkpoint_obj': make_checkpoint_obj,

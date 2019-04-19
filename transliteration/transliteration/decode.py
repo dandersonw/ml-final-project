@@ -190,11 +190,14 @@ def deintern_decode_results(interned_results, to_script):
     return results
 
 
-def intern_strings(input_strs, from_script):
+def intern_strings(input_strs, from_script, add_end=False):
     scriptt = SCRIPTS[from_script]
     seqs = [[scriptt.intern_char(c)
              for c in scriptt.preprocess_string(input_str)]
             for input_str in input_strs]
+    if add_end:
+        for seq in seqs:
+            seq.append(scriptt.intern_char('<end>'))
     ndarray = np.zeros([len(seqs), max(len(seq) for seq in seqs)],
                        dtype=np.int64)
     for i, seq in enumerate(seqs):
@@ -217,7 +220,7 @@ def transliterate(*,
     weights = []
     for l in range(0, input_len, batch_size):
         r = min(input_len, l + batch_size)
-        input_seqs = intern_strings(input_strs[l:r], from_script)
+        input_seqs = intern_strings(input_strs[l:r], from_script, add_end=True)
         encoder_output, encoder_state = encoder(input_seqs)
         batch_hyps, batch_weights = decoding_method(encoder_output=encoder_output,
                                                     encoder_state=encoder_state,

@@ -122,12 +122,22 @@ def _combine_words_augmentation(dataset: tf.data.Dataset,
             result[length_key] = tf.reduce_sum(new_lengths)
         return result
 
+    def depad_first(batch):
+        result = dict()
+        for scriptt in script_names:
+            length_key = 'length_{}'.format(scriptt)
+            tokens = batch[scriptt][0]
+            wasnt_padding = tf.not_equal(tokens, 0)
+            result[scriptt] = tf.boolean_mask(tokens, wasnt_padding)
+            result[length_key] = batch[length_key][0]
+        return result
+
     def maybe_concat(batch):
         cond = tf.less(tf.random.uniform([], dtype=tf.float32),
                        tf.constant(proportion, shape=[]))
         element = tf.cond(cond,
                           true_fn=lambda: concat(batch),
-                          false_fn=lambda: {k: v[0] for k, v in batch.items()})
+                          false_fn=lambda: depad_first(batch))
         return element
     return dataset.padded_batch(2, padded_shapes=padding_shapes)\
                   .map(maybe_concat)

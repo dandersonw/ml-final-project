@@ -19,6 +19,8 @@ def main():
 
     for line in sys.stdin:
         line = line.strip()
+        if not line:
+            continue
         results = decode.transliterate(input_strs=[line],
                                        from_script=from_script,
                                        to_script=to_script,

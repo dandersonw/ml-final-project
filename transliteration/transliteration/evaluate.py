@@ -43,12 +43,14 @@ def character_error_rate(gold, pred, *, script_name):
 
 def edit_distance(a, b, *, script_name):
     scriptt = SCRIPTS[script_name]
-    assert(all(scriptt._char_in_range(c) for c in a))
-    assert(all(scriptt._char_in_range(c) for c in b))
-    a = np.asarray([scriptt._intern_char(c)
-                    for c in scriptt.preprocess_string(a)])
-    b = np.asarray([scriptt._intern_char(c)
-                    for c in scriptt.preprocess_string(b)])
+    a = scriptt.preprocess_string(a)
+    b = scriptt.preprocess_string(b)
+    if not all(scriptt._char_in_range(c) for c in a):
+        raise ValueError(a)
+    if not all(scriptt._char_in_range(c) for c in b):
+        raise ValueError(b)
+    a = np.asarray([scriptt._intern_char(c) for c in a])
+    b = np.asarray([scriptt._intern_char(c) for c in b])
     dp = np.full([len(a) + 1, len(b) + 1], np.nan, np.float64)
     return _edit_distance(0, 0, a, b, dp, scriptt.ins_cost, scriptt.sub_cost)
 
