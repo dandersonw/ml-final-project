@@ -50,13 +50,18 @@ def main():
     mrr_at_5 = evaluate.mrr(test_strings[to_script],
                             predicted,
                             k=5)
-    cee = evaluate.character_error_rate(test_strings[to_script],
-                                        predicted,
-                                        script_name=to_script)
+    cer_ours = evaluate.character_error_rate(test_strings[to_script],
+                                             predicted,
+                                             script_name=to_script)
+    cer_standard = evaluate.character_error_rate(test_strings[to_script],
+                                                 predicted,
+                                                 script_name=to_script,
+                                                 use_script_cost=False)
     print('Accuracy at k=1: {:.3f}'.format(acc_at_1))
     print('Accuracy at k=5: {:.3f}'.format(acc_at_5))
     print('MRR at k=5: {:.3f}'.format(mrr_at_5))
-    print('Character error rate: {:.3f}'.format(cee))
+    print('CER*: {:.3f}'.format(cer_ours))
+    print('CER: {:.3f}'.format(cer_standard))
 
 
 if __name__ == '__main__':

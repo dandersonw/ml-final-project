@@ -30,18 +30,21 @@ def mrr(gold, pred, k=5):
     return rr / count
 
 
-def character_error_rate(gold, pred, *, script_name):
+def character_error_rate(gold, pred, *, script_name, use_script_cost=True):
     length_sum = 0
     error_sum = 0
     pred_strs, pred_weights = pred
     for g, p in zip(gold, pred_strs):
         p = p[0]  # only consider the top choice
         length_sum += len(g)
-        error_sum += edit_distance(g, p, script_name=script_name)
+        error_sum += edit_distance(g,
+                                   p,
+                                   script_name=script_name,
+                                   use_script_cost=use_script_cost)
     return error_sum / length_sum
 
 
-def edit_distance(a, b, *, script_name):
+def edit_distance(a, b, *, script_name, use_script_cost=True):
     scriptt = SCRIPTS[script_name]
     a = scriptt.preprocess_string(a)
     b = scriptt.preprocess_string(b)
@@ -52,7 +55,13 @@ def edit_distance(a, b, *, script_name):
     a = np.asarray([scriptt._intern_char(c) for c in a])
     b = np.asarray([scriptt._intern_char(c) for c in b])
     dp = np.full([len(a) + 1, len(b) + 1], np.nan, np.float64)
-    return _edit_distance(0, 0, a, b, dp, scriptt.ins_cost, scriptt.sub_cost)
+    ins_cost = (scriptt.ins_cost
+                if use_script_cost
+                else np.ones_like(scriptt.ins_cost))
+    sub_cost = (scriptt.sub_cost
+                if use_script_cost
+                else np.ones_like(scriptt.sub_cost))
+    return _edit_distance(0, 0, a, b, dp, ins_cost, sub_cost)
 
 
 @numba.jit(nopython=True)
