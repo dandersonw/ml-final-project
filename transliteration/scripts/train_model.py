@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--save-path', required=True)
     parser.add_argument('--random-restarts', default=3, type=int)
     parser.add_argument('--batch-size', default=128, type=int)
+    parser.add_argument('--patience', default=3, type=int)
     args = parser.parse_args()
 
     encoder_config = json.loads(args.encoder_config)
@@ -68,7 +69,8 @@ def main():
                                      from_script=args.from_script,
                                      to_script=args.to_script,
                                      transfer_to_script=args.transfer_to_script,
-                                     batch_size=args.batch_size)
+                                     batch_size=args.batch_size,
+                                     patience=args.patience)
         if best_val_acc is None or val_acc > best_val_acc:
             model_setup.save_to_pkl(setup, args.save_path)
             best_val_acc = val_acc
@@ -93,8 +95,8 @@ def train_model(*,
                 from_script,
                 to_script,
                 transfer_to_script=None,
-                batch_size):
-
+                batch_size,
+                patience):
     doing_transfer_learning = (transfer_train_data is not None
                                or transfer_valid_data is not None
                                or transfer_start_save is not None)
@@ -164,7 +166,6 @@ def train_model(*,
             # TODO - hand off to model_setup?
             setup[m].set_weights(saved_setup[m].get_weights())
         del saved_setup
-
     if doing_transfer_learning:
         if transfer_training == 'sequential' and transfer_start_save is None:
             train.normal_training_regimen(train_data=transfer_train_data,
@@ -184,13 +185,15 @@ def train_model(*,
                           (train_data, valid_data)]
             final_val_acc = train.round_robin_training_regimen(model_setups=setups,
                                                                data_pairs=data_pairs,
-                                                               goal_script=to_script)
+                                                               goal_script=to_script,
+                                                               patience=patience)
     else:
         final_val_acc = train.normal_training_regimen(train_data=train_data,
                                                       valid_data=valid_data,
                                                       from_script=from_script,
                                                       to_script=to_script,
-                                                      setup=setup)
+                                                      setup=setup,
+                                                      patience=patience)
     return setup, final_val_acc
 
 
