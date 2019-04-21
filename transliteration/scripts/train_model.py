@@ -18,17 +18,19 @@ def main():
                         help='Train data in TFRecord format')
     parser.add_argument('--transfer-valid-data',
                         help='Validation data in TFRecord format')
-    parser.add_argument('--transfer-style', default='normal')
     parser.add_argument('--data-kwargs', default='{}')
     parser.add_argument('--transfer-data-kwargs', default='{}')
     parser.add_argument('--from-script', required=True)
     parser.add_argument('--to-script', required=True)
-    parser.add_argument('--transfer-to-script')
     parser.add_argument('--encoder-config', required=True)
     parser.add_argument('--decoder-config', required=True)
+    parser.add_argument('--start-save')
+    parser.add_argument('--transfer-to-script')
     parser.add_argument('--transfer-encoder-config')
     parser.add_argument('--transfer-decoder-config')
     parser.add_argument('--transfer-start-save')
+    parser.add_argument('--transfer-style', default='normal')
+    parser.add_argument('--transfer-training', default='sequential')
     parser.add_argument('--save-path', required=True)
     parser.add_argument('--random-restarts', default=3, type=int)
     parser.add_argument('--batch-size', default=128, type=int)
@@ -49,26 +51,28 @@ def main():
 
     for r in range(args.random_restarts):
         print('Random restart No. {}'.format(r))
-        models, val_acc = train_model(encoder_config=encoder_config,
-                                      decoder_config=decoder_config,
-                                      data_kwargs=data_kwargs,
-                                      transfer_data_kwargs=transfer_data_kwargs,
-                                      train_data=args.train_data,
-                                      valid_data=args.valid_data,
-                                      transfer_style=args.transfer_style,
-                                      transfer_encoder_config=transfer_encoder_config,
-                                      transfer_decoder_config=transfer_decoder_config,
-                                      transfer_train_data=args.transfer_train_data,
-                                      transfer_valid_data=args.transfer_valid_data,
-                                      transfer_start_save=args.transfer_start_save,
-                                      from_script=args.from_script,
-                                      to_script=args.to_script,
-                                      transfer_to_script=args.transfer_to_script,
-                                      batch_size=args.batch_size)
+        setup, val_acc = train_model(encoder_config=encoder_config,
+                                     decoder_config=decoder_config,
+                                     data_kwargs=data_kwargs,
+                                     transfer_data_kwargs=transfer_data_kwargs,
+                                     train_data=args.train_data,
+                                     valid_data=args.valid_data,
+                                     start_save=args.start_save,
+                                     transfer_encoder_config=transfer_encoder_config,
+                                     transfer_decoder_config=transfer_decoder_config,
+                                     transfer_train_data=args.transfer_train_data,
+                                     transfer_valid_data=args.transfer_valid_data,
+                                     transfer_start_save=args.transfer_start_save,
+                                     transfer_style=args.transfer_style,
+                                     transfer_training=args.transfer_training,
+                                     from_script=args.from_script,
+                                     to_script=args.to_script,
+                                     transfer_to_script=args.transfer_to_script,
+                                     batch_size=args.batch_size)
         if best_val_acc is None or val_acc > best_val_acc:
-            model_setup.save_to_pkl(models, args.save_path)
+            model_setup.save_to_pkl(setup, args.save_path)
             best_val_acc = val_acc
-    print('Best validation acc: {:.3f}'.format(best_val_acc))
+            print('Best validation acc: {:.3f}'.format(best_val_acc))
 
 
 def train_model(*,
@@ -78,12 +82,14 @@ def train_model(*,
                 transfer_data_kwargs,
                 train_data,
                 valid_data,
+                start_save=None,
                 transfer_style=None,
                 transfer_train_data=None,
                 transfer_valid_data=None,
                 transfer_encoder_config=None,
                 transfer_decoder_config=None,
                 transfer_start_save=None,
+                transfer_training=None,
                 from_script,
                 to_script,
                 transfer_to_script=None,
@@ -103,13 +109,12 @@ def train_model(*,
 
         if transfer_start_save is not None:
             # TODO - check for config consistency?
-            saved_models = model_setup.load_from_pkl(transfer_start_save)
-            transfer_to_script = saved_models['to_script']
-            transfer_encoder_config = saved_models['config']['encoder']
-            transfer_decoder_config = saved_models['config']['decoder']
-            transfer_style = saved_models['setup']
+            saved_setup = model_setup.load_from_pkl(transfer_start_save)
+            transfer_to_script = saved_setup['to_script']
+            transfer_encoder_config = saved_setup['config']['encoder']
+            transfer_decoder_config = saved_setup['config']['decoder']
 
-        initial_models, models = \
+        initial_setup, setup = \
             model_setup.transfer_learning_setup(encoder_config=encoder_config,
                                                 decoder_config=decoder_config,
                                                 transfer_encoder_config=transfer_encoder_config,
@@ -122,8 +127,8 @@ def train_model(*,
         if transfer_start_save is not None:
             for m in {'encoder', 'decoder'}:
                 # TODO - hand off to model_setup?
-                initial_models[m].set_weights(saved_models[m].get_weights())
-            del saved_models
+                initial_setup[m].set_weights(saved_setup[m].get_weights())
+            del saved_setup
         else:
             transfer_train_data = data.make_dataset(transfer_train_data,
                                                     from_script=from_script,
@@ -135,16 +140,11 @@ def train_model(*,
                                                     to_script=transfer_to_script,
                                                     batch_size=batch_size,
                                                     **transfer_data_kwargs)
-            train.normal_training_regimen(train_data=transfer_train_data,
-                                          valid_data=transfer_valid_data,
-                                          from_script=from_script,
-                                          to_script=transfer_to_script,
-                                          models=initial_models)
     else:
-        models = model_setup.normal_setup(encoder_config=encoder_config,
-                                          decoder_config=decoder_config,
-                                          from_script=from_script,
-                                          to_script=to_script)
+        setup = model_setup.normal_setup(encoder_config=encoder_config,
+                                         decoder_config=decoder_config,
+                                         from_script=from_script,
+                                         to_script=to_script)
 
     train_data = data.make_dataset(train_data,
                                    from_script=from_script,
@@ -157,12 +157,41 @@ def train_model(*,
                                    batch_size=batch_size,
                                    **data_kwargs)
 
-    final_val_acc = train.normal_training_regimen(train_data=train_data,
-                                                  valid_data=valid_data,
-                                                  from_script=from_script,
-                                                  to_script=to_script,
-                                                  models=models)
-    return models, final_val_acc
+    if start_save is not None:
+        # TODO - load config from the pickle?
+        saved_setup = model_setup.load_from_pkl(start_save)
+        for m in {'encoder', 'decoder'}:
+            # TODO - hand off to model_setup?
+            setup[m].set_weights(saved_setup[m].get_weights())
+        del saved_setup
+
+    if doing_transfer_learning:
+        if transfer_training == 'sequential' and transfer_start_save is None:
+            train.normal_training_regimen(train_data=transfer_train_data,
+                                          valid_data=transfer_valid_data,
+                                          from_script=from_script,
+                                          to_script=transfer_to_script,
+                                          setup=initial_setup)
+        if transfer_training == 'sequential':
+            final_val_acc = train.normal_training_regimen(train_data=train_data,
+                                                          valid_data=valid_data,
+                                                          from_script=from_script,
+                                                          to_script=to_script,
+                                                          setup=setup)
+        elif transfer_training == 'round-robin':
+            setups = [initial_setup, setup]
+            data_pairs = [(transfer_train_data, transfer_valid_data),
+                          (train_data, valid_data)]
+            final_val_acc = train.round_robin_training_regimen(model_setups=setups,
+                                                               data_pairs=data_pairs,
+                                                               goal_script=to_script)
+    else:
+        final_val_acc = train.normal_training_regimen(train_data=train_data,
+                                                      valid_data=valid_data,
+                                                      from_script=from_script,
+                                                      to_script=to_script,
+                                                      setup=setup)
+    return setup, final_val_acc
 
 
 if __name__ == '__main__':

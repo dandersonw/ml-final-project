@@ -17,6 +17,7 @@ class Config():
                  lstm_size,
                  embedding_size,
                  vocab_size,
+                 dropout=0.0,
                  attention='bahdanau',
                  attention_size=None):
         self.lstm_size = lstm_size
@@ -24,6 +25,7 @@ class Config():
         self.vocab_size = vocab_size
         self.attention = attention
         self.attention_size = attention_size
+        self.dropout = dropout
 
 
 class Encoder(tfk.Model):
@@ -37,10 +39,13 @@ class Encoder(tfk.Model):
                                          return_sequences=True,
                                          return_state=True),
                                      merge_mode='concat')
+        self.dropout = tf.keras.layers.Dropout(config.dropout)
 
     def call(self, inputs, training=False):
         embedded = self.embedding(inputs)
         output, forward_state, backward_state = self.encoder(embedded)
+        output = self.dropout(output)
+        backward_state = self.dropout(backward_state)
         return output, backward_state
 
 
@@ -51,8 +56,8 @@ class CombinedEncoder(Encoder):
         self.base_encoder = base_encoder
 
     def call(self, inputs):
-        this_out, _, this_state = super(CombinedEncoder, self)(inputs)
-        base_out, _, base_state = self.base_encoder(inputs)
+        this_out, this_state = super(CombinedEncoder, self).call(inputs)
+        base_out, base_state = self.base_encoder(inputs)
         return (tf.concat([base_out, this_out], axis=-1),
                 tf.concat([base_state, this_state], axis=-1))
 

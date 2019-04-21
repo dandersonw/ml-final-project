@@ -1,1 +1,1 @@
-{"lstm_size": 120, "embedding_size": 30}
+{"lstm_size": 120, "embedding_size": 30, "dropout": 0.5}

@@ -64,6 +64,8 @@ def transfer_learning_setup(*,
         transfer_setup = _normal_transfer_setup
     elif style == 'stacked':
         transfer_setup = _stacked_transfer_setup
+    elif style == 'combined':
+        transfer_setup = _combined_transfer_setup
 
     initial, main =\
         transfer_setup(from_script=from_script,
@@ -135,6 +137,65 @@ def _normal_transfer_setup(*,
     return initial, main
 
 
+def _combined_transfer_setup(*,
+                             from_script,
+                             encoder_config,
+                             decoder_config,
+                             transfer_encoder_config,
+                             transfer_decoder_config,
+                             to_script,
+                             optimizer,
+                             transfer_to_script):
+    config_keys = {**transfer_decoder_config,
+                   **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
+    t_decoder_config_obj = model_one.Config(**config_keys)
+    transfer_decoder = model_one.Decoder(t_decoder_config_obj)
+
+    config_keys = {**transfer_encoder_config,
+                   **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
+    encoder_config_obj = model_one.Config(**config_keys)
+    transfer_encoder = model_one.Encoder(encoder_config_obj)
+
+    config_keys = {**decoder_config,
+                   **{'vocab_size': script.SCRIPTS[to_script].vocab_size}}
+    decoder_config_obj = model_one.Config(**config_keys)
+    decoder = model_one.Decoder(decoder_config_obj)
+    config_keys = {**encoder_config,
+                   **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
+    encoder_config_obj = model_one.Config(**config_keys)
+    encoder = model_one.CombinedEncoder(encoder_config_obj, transfer_encoder)
+
+    def make_checkpoint_obj():
+        return tf.train.Checkpoint(optimizer=optimizer,
+                                   encoder=encoder,
+                                   transfer_decoder=transfer_decoder,
+                                   decoder=decoder)
+
+    initial = {'setup': 'normal',
+               'encoder': transfer_encoder,
+               'decoder': transfer_decoder,
+               'trainable': {'encoder': True, 'decoder': True},
+               'from_script': from_script,
+               'to_script': transfer_to_script,
+               'make_checkpoint_obj': make_checkpoint_obj,
+               'config': {'encoder': transfer_encoder_config,
+                          'decoder': transfer_decoder_config}}
+    main = {'setup': 'combined',
+            'encoder': encoder,
+            'decoder': decoder,
+            'transfer_encoder': transfer_encoder,
+            'trainable': {'encoder': True, 'decoder': True},
+            'freeze': ['transfer_encoder'],
+            'from_script': from_script,
+            'to_script': to_script,
+            'make_checkpoint_obj': make_checkpoint_obj,
+            'config': {'encoder': encoder_config,
+                       'decoder': decoder_config,
+                       'transfer_encoder': transfer_encoder_config,
+                       'transfer_decoder': transfer_decoder_config}}
+    return initial, main
+
+
 def _stacked_transfer_setup(*,
                             from_script,
                             transfer_encoder_config,
@@ -197,11 +258,13 @@ def save_to_pkl(setup, save_path):
     additional_dump = dict()
     setup_style = setup['setup']
     saved_models = {'encoder', 'decoder'}
-    if setup_style == 'normal':
+    if setup_style in {'normal', 'combined'}:
         pass
     elif setup_style == 'stacked':
         # saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
         additional_dump['transfer_to_script'] = setup['transfer_to_script']
+    else:
+        raise ValueError()
 
     saved_weights = {m: setup[m].get_weights()
                      for m in saved_models}
@@ -223,8 +286,7 @@ def load_from_pkl(save_path):
                               decoder_config=dump['config']['decoder'],
                               from_script=dump['from_script'],
                               to_script=dump['to_script'])
-    elif setup_style == 'stacked':
-        # saved_models = {'encoder', 'decoder', 'transfer_encoder', 'transfer_decoder'}
+    elif setup_style in {'stacked', 'combined'}:
         _, result = transfer_learning_setup(encoder_config=dump['config']['encoder'],
                                             decoder_config=dump['config']['decoder'],
                                             transfer_encoder_config=dump['config']['transfer_encoder'],
@@ -232,8 +294,19 @@ def load_from_pkl(save_path):
                                             from_script=dump['from_script'],
                                             to_script=dump['to_script'],
                                             transfer_to_script=dump['transfer_to_script'],
-                                            style='stacked')
+                                            style=setup_style)
+    else:
+        raise ValueError()
     saved_weights = dump['weights']
     for m in saved_models:
         result[m].set_weights(saved_weights[m])
     return result
+
+
+def pre_training_freeze(setup):
+    if 'freeze' in setup:
+        for m in setup['freeze']:
+            m = setup[m]
+            for l in m.layers:
+                l.trainable = False
+
