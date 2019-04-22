@@ -167,8 +167,9 @@ def _combined_transfer_setup(*,
 
     def make_checkpoint_obj():
         return tf.train.Checkpoint(optimizer=optimizer,
-                                   encoder=encoder,
+                                   transfer_encoder=transfer_encoder,
                                    transfer_decoder=transfer_decoder,
+                                   encoder=encoder,
                                    decoder=decoder)
 
     initial = {'setup': 'normal',

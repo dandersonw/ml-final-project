@@ -74,7 +74,7 @@ def main():
         if best_val_acc is None or val_acc > best_val_acc:
             model_setup.save_to_pkl(setup, args.save_path)
             best_val_acc = val_acc
-            print('Best validation acc: {:.3f}'.format(best_val_acc))
+        print('Best validation acc: {:.3f}'.format(best_val_acc))
 
 
 def train_model(*,
