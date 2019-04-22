@@ -5,6 +5,7 @@
 \usepackage{cite}
 \usepackage{listings}
 \usepackage{multicol}
+\usepackage{booktabs}
 \usepackage{url}
 \usepackage{xeCJK}
 \setCJKmainfont{IPAMincho}
@@ -53,6 +54,9 @@ Derick has a personal interest in Japanese, transliteration, and both together.
 Timothy would like to gain experience in natural language processing and machine
 translation.
 
+All of our code is available on GitHub
+\footnote{https://github.com/dandersonw/ml-final-project}.
+
 \section*{Background}
 
 \subsection*{Transliteration}
@@ -89,7 +93,6 @@ or cross-language information retrieval (e.g. \cite{10.1007/978-3-642-40087-2_29
 A limitation of our proposed approach
 is that we will not pay any special attention to proper nouns,
 which often have their own conventions for transliteration.
-% maybe we will want to?
 
 The use of transliteration most relevant to this project
 is the borrowing of words from foreign languages.
@@ -318,7 +321,8 @@ that we get out of the word translation half of the project.
 
 All of the networks we use operate on a character basis.
 Each script is a separate vocabulary;
-the Japanese decoder can output only katakana characters.
+the Japanese decoder can output only katakana characters
+and the English encoder can read only English characters.
 We operate on composed representations of Unicode characters:
 e.g. ``ガ'' is represented by the atomic \texttt{U+X30AC KATAKANA LETTER GA},
 not ``カ'' \texttt{U+X30AB KATAKANA LETTER KA} followed by
@@ -339,9 +343,22 @@ explicitly integrating a pronunciation layer into our model,
 but by formulating a multitask learning problem.
 The first task is to predict the pronunciation of an English word,
 and the second to predict the transliteration of an English word.
-We use the same basic sequence-to-sequence architecture for both problems.
+The CMU pronunciation dictionary represents pronunciation
+as a sequence of tokens,
+e.g. ``Japanese'' is ``JH AE2 P AH0 N IY1 Z''.
+We treat predicting the pronunciation exactly the same as
+transliterating into another script.
 
-% TODO...
+We create one encoder that encodes English,
+and two decoders, one for katakana and one for pronunciation.
+We first train in a round-robin fashion,
+an epoch per predicted script per round,
+until convergence (as measured by an early stopping criterion).
+We then train on only the English -> Japanese pair
+until convergence.
+The hope is that the encoder learns a representation useful to both decoders,
+and that the supervision provided by the pronunciation data
+helps to learn Japanese transliteration.
 
 \subsubsection*{Evaluation}
 
@@ -399,6 +416,56 @@ to insert a gemination (consonant-doubling) mark.
 \subsection*{Unsupervised Word Translation}
 
 \subsection*{Transliteration}
+
+Due to a lack of compute resources we could perform
+only very limited hyperparameter optimization.
+All results reported here are from model configurations
+with a bidirectional one layer GRU in the encoder,
+a one layer GRU in the decoder,
+and all RNN cells having 120 units.
+We clip gradients to a norm of 5,
+apply dropout with rate 0.5 between the encoder and the decoder,
+and train with an ADAM optimizer with TensorFlow default hyperparameters
+\footnote{https://www.tensorflow.org/api\_docs/python/tf/keras/optimizers/Adam}
+We use accuracy on the validation set as an early-stopping metric
+with a patience of three epochs.
+For decoding we use beam search with ten beams.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{r | c c c c}
+    Training Data & Accuracy & MRR@5 & CER & CER* \\
+    \midrule
+    our pairs & .007 & 0.011 & 0.741 & 0.866 \\
+    our pairs + pronunciation & 0.021 & 0.031 & 0.717 & 0.844 \\
+  \end{tabular}
+  \caption{Results of learning transliteration on our generated word
+    translations. Evaluated on MUSE data}
+\end{table}
+
+As you can see,
+the model did not succeed in learning transliteration
+from the dataset we generated with word translation.
+Adding in multitask learning with pronunciation does triple the accuracy,
+but only to 2.1\%.
+For comparison I evaluated the models trained on other data on the MUSE set.
+Since the MUSE data has some ambiguity,
+i.e. it provides multiple translations for some words,
+I also calculate the ceiling for each metric
+that could be reached by memorizing the test data.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{r | c c c c}
+    Training Data & Accuracy & MRR@5 & CER & CER* \\
+    \midrule
+    eob & .403 & 0.486 & 0.240 & 0.312 \\
+    eob + pronunciation & 0.441 & 0.526 & 0.222 & 0.290 \\
+    \midrule
+    ideal model (memorized MUSE data) & 0.959 & 0.979 & 0.021 & 0.016\\
+  \end{tabular}
+  \caption{Other models evaluated on MUSE data}
+\end{table}
 
 \section*{Conclusions}
 
