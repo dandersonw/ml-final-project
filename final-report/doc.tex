@@ -211,6 +211,8 @@ $$
 
 \subsection*{Unsupervised Word Translation}
 
+\subsection*{Data}
+
 We begin by downloading pre-trained monolingual word vectors for English, Japanese,
 and all the other languages we plan to run experiments with \cite{bojanowski2017enriching}.
 These are 300 dimensional word vectors trained on Wikipedia using fastText.
@@ -224,6 +226,8 @@ Other than Japanese, we run experiments on the following languages paired with E
 Spanish, French, Chinese, Portuguese, Hebrew, Hindi, Thai, Korean, and Arabic. This
 allows us to first reproduce their results on 3 language pairs, along with test their
 method's generalization on 7 new language pairs of varying similarity.
+
+\subsection*{Methodology}
 
 As we are simply reproducing the results outlined in Word Translation Without Parallel
 Data, we use the same training architecture and methodology. Firstly, only the 200k
@@ -245,10 +249,6 @@ $$
 W \leftarrow (1 + \beta)W - \beta(WW^T)W
 $$
 
-Finally, the proposed validation metric CSLS is used with the 10k most frequent
-source words for model evaluation (and when deciding to shrink the learning rate
-during training).
-
 When generating the synthetic parallel data to be used for transliteration, we take
 the aligned Japanese embedding space with the best word translation precision
 @ $\text{k}=1$ and generate proposed translations for the 50k most frequent
@@ -256,6 +256,14 @@ source words using CSLS. We choose the top 50k words since that is the largest
 amount our computer can handle to perform CSLS on at the same time. While we could
 run vanilla K nearest neighbors in "batches", this produces worse translations
 since the hubness problem persists.
+
+\subsection*{Evaluation}
+
+The proposed validation metric CSLS is used with the 10k most frequent source words
+for model selection (and when deciding to shrink the learning rate during training).
+However for final evaluation, we simply use word translation precision @
+$\text{k}=1$. This is to ensure the translations used for transliteration are as
+accurate as possible.
 
 \subsection*{Transliteration}
 
