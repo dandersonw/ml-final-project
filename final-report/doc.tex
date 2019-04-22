@@ -1,0 +1,215 @@
+\documentclass{article}
+
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{url}
+\usepackage{xeCJK}
+\setCJKmainfont{IPAMincho}
+
+\setlength{\parindent}{4em}
+\setlength{\parskip}{1em}
+
+\title{Transliterating English to Japanese Without Parallel Data}
+\date{2019-04-22}
+\author{Derick Anderson \\ anderson.de@husky.neu.edu
+  \and Timothy Gillis \\ gillis.ti@husky.neu.edu }
+
+\begin{document}
+
+\pagenumbering{gobble}
+\maketitle
+
+\section*{Introduction}
+
+We aim to learn to transliterate English to Japanese
+without any parallel data.
+That is to say,
+given only monolingual corpora
+and the tiniest insight about Japanese orthography
+to learn how to represent English words in Japanese script.
+Learning to transliterate with limited supervision has been well studied,
+but there have been only limited attempts to learn without at least parallel data.
+The key inspiration was the recent paper by
+Conneau et al. \cite{Conneau2018WordTW}
+in which word translations were learned with no parallel data
+(or any other supervision).
+Conneau et al. did not touch Japanese,
+so we hope to first replicate their work on the Japanese-English language pair.
+We then hope to discover an algorithm to learn to transliterate
+using those (probably noisy) results as training data.
+
+As big data becomes more readily available, the cost of manually labeling large
+datasets emphasizes the need for unsupervised algorithms that perform as well if
+not better than their supervised counterparts, and the cost of cleaning these
+datasets highlights the need for algorithms to effectively handle noisy data as well.
+Our project will touch upon both of these problems in the machine transliteration
+sphere, specifically by first generating a Japanese-English dictionary in an
+unsupervised way, then attempting to learn to transliterate from that noisy data.
+
+Derick has a personal interest in Japanese, transliteration, and both together.
+Timothy would like to gain experience in natural language processing and machine
+translation.
+
+\section*{Background}
+
+\subsection*{Transliteration}
+
+Transliteration is representing words
+in a script or orthographic style
+other than that with which they were originally represented.
+Between close scripts like the Old English alphabet and the modern English alphabet
+this can be a mechanical character to character mapping:
+e.g. ``þe olde'' to ``ye olde''.
+Between distant scripts
+like the English alphabet and Japanese katakana
+the task becomes more difficult.
+Translation includes transliteration as a subtask,
+although the relationship between the two
+depends on the language pair, intended audience, and other factors.
+
+In the literature on machine transliteration there is a distinction
+between generative transliteration and transliteration extraction.
+Generative transliteration learns a function for transliterating;
+transliteration extraction just identifies pairs of strings
+to be added to a transliteration dictionary
+\cite{Karimi:2011:MTS:1922649.1922654}.
+In this paper we will be doing generative transliteration.
+
+In translating into both English and Japanese
+probably the most common use of transliteration
+is representing foreign proper nouns.
+Because proper nouns are an open and varied class
+there has been a lot of work on unsupervised learning to transliterate them
+(e.g. \cite{Tao2006UnsupervisedNE}),
+maybe for use in machine translation (e.g. \cite{Durrani2014IntegratingAU})
+or cross-language information retrieval (e.g. \cite{10.1007/978-3-642-40087-2_29}).
+A limitation of our proposed approach
+is that we will not pay any special attention to proper nouns,
+which often have their own conventions for transliteration.
+% maybe we will want to?
+
+The use of transliteration most relevant to this project
+is the borrowing of words from foreign languages.
+Like proper nouns,
+some words may not have equivalents in every language,
+and rather than create a neologism from native material (e.g. as done in Icelandic)
+a foreign word might be adopted and used.
+
+The work most closely related to ours is that of Ravi and Knight
+\cite{Ravi2009LearningPM}
+who learn to back-transliterate from Japanese to English
+without any parallel data.
+Back-transliteration is the process of
+transforming a katakana string that represents an English word
+back into the English word it represents.
+The Ravi and Knight work seems to be followed up some other work
+like a paper by Levinboim et. al. \cite{Levinboim2015ModelIR}
+which aims to improve the same basic approach.
+The key difference between their approach and ours
+is that theirs requires a well trained model of Japanese and English phonetics.
+We may choose to utilize an English phonetic model,
+but don't require either.
+Furthermore,
+they impose constraints and start with favorable intializations
+based on prior knowledge about transliteration.
+We will utilize the fact
+that English words are translated into katakana,
+but hope to not inject any other prior knowledge.
+Learning to transliterate into katakana
+without knowledge of their pronunciation
+or much aid from prior knowledge should be a step forward.
+
+\subsection*{The Japanese-English Language Pair}
+
+In modern orthography
+Japanese represents foreign words
+by approximating the pronunciation of the foreign word
+in a syllabary \footnote{In a syllabary each character represents a syllable,
+although katakana has some exceptions by that definition.} called katakana.
+Native Japanese words and loanwords from Chinese
+\footnote{Words of Sinitic origin are so common in Japanese that they not considered
+  foreign in the same sense as words from English.}
+are usually represented in scripts besides katakana:
+the hiragana syllabary and kanji
+\footnote{``Kanji'' is the Japanese name for Chinese characters.}.
+The approximation of pronunciation is really quite approximate;
+because Japanese has a relatively limited phonetic inventory (range of sounds used)
+not all English sounds can be represented.
+In the face of the complicated correspondence
+between English spelling and English pronunciation
+(to say nothing of international English variants)
+Japanese people sometimes transliterate based on the spelling of a word
+rather than the pronunciation.
+An ideal system,
+therefore,
+will probably need to consider both phonetics and spelling.
+
+Japanese has taken many loan words from English.
+These can be common nouns (bed, ベッド),
+verbs (join, ジョイン),
+adjectives (sexy, セクシー),
+or even sentence pieces (let's!, レッツ！).
+Many (most?) loan words
+are used in the same ways as their English equivalents,
+although the meaning of some has diverged.
+Japanese has also taken loanwords from other languages
+that are written in katakana,
+some of which may conflict with English words.
+An example is ナトリウム,
+translated from the Latin natrium,
+meaning sodium (consider the Na elemental abbreviation).
+The hope is that clever matching of English words
+will allow useful transcription pairs to be found.
+
+\subsection*{Word Translation Without Parallel Data}
+
+Last year, Conneau et al. proposed a state-of-the-art unsupervised method for machine
+translation without using any parallel corpora, that works well for both distant
+language pairs (e.g. English-Chinese, English-Japanese) and pairs with limited parallel
+data (e.g. English-Esperanto), also outperforming supervised methods on some language
+pairs. This is accomplished by aligning the monolingual word embedding spaces for each
+language in the pair.
+
+Supervised methods attempt to learn a linear mapping $W$ between the source and target
+space such that $WX-Y$ is minimized, where $X$ and $Y$ are the source and target word
+embedding pairs, respectively. Because they attempt to learn $W$ without cross-lingual 
+supervision, they use a domain-adversarial approach, where a discriminator is trained
+to discriminate between translated (i.e. generated) words and words actually from the
+target domain, and $W$ is simultaneously trained to "fool" the discriminator by making
+the generated words as similar to the target words as possible.
+
+While the learned $W$ roughly aligns the two embedding spaces, Conneau et al add two
+modifications to further align the spaces. First, a refinement procedure is proposed
+where the $W$ trained via the adversarial method is used to generate a synthetic
+parallel vocabulary, which is then used to minimize $WX-Y$ in a supervised manner.
+Second, they introduce a cross-domain similarity adaptation to mitigate the "hubness
+problem" (i.e. in high dimensional spaces, some points tend to be nearest neighbors
+to many other points).
+
+\section*{Methods}
+
+\subsection*{Unsupervised Word Translation}
+
+\subsection*{Transliteration}
+
+\section*{Results}
+
+\subsection*{Unsupervised Word Translation}
+
+\subsection*{Transliteration}
+
+\section*{Conclusions}
+
+\section*{Individual Tasks}
+
+\bibliography{doc}{}
+\bibliographystyle{plain}
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-engine: xetex
+%%% TeX-master: t
+%%% End:
