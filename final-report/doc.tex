@@ -434,7 +434,7 @@ For decoding we use beam search with ten beams.
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
-    Training Data & Accuracy & MRR@5 & CER & CER* \\
+    Training Data & Accuracy & MRR@5 & CER* & CER \\
     \midrule
     our pairs & .007 & 0.011 & 0.741 & 0.866 \\
     our pairs + pronunciation & 0.021 & 0.031 & 0.717 & 0.844 \\
@@ -443,21 +443,20 @@ For decoding we use beam search with ten beams.
     translations. Evaluated on MUSE data}
 \end{table}
 
+I conducted an experiment to learn transliteration from word translations,
+according to the methods section above.
+I also conducted an experiment with multitask learning
+using our translations for the Japanese script.
 As you can see,
 the model did not succeed in learning transliteration
 from the dataset we generated with word translation.
 Adding in multitask learning with pronunciation does triple the accuracy,
 but only to 2.1\%.
-For comparison I evaluated the models trained on other data on the MUSE set.
-Since the MUSE data has some ambiguity,
-i.e. it provides multiple translations for some words,
-I also calculate the ceiling for each metric
-that could be reached by memorizing the test data.
 
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
-    Training Data & Accuracy & MRR@5 & CER & CER* \\
+    Training Data & Accuracy & MRR@5 & CER* & CER \\
     \midrule
     eob & .403 & 0.486 & 0.240 & 0.312 \\
     eob + pronunciation & 0.441 & 0.526 & 0.222 & 0.290 \\
@@ -467,7 +466,77 @@ that could be reached by memorizing the test data.
   \caption{Other models evaluated on MUSE data}
 \end{table}
 
+For comparison I evaluated the models trained on other data on the MUSE set.
+Since the MUSE data has some ambiguity,
+i.e. it provides multiple translations for some words,
+I also calculate the ceiling for each metric
+that could be reached by memorizing the test data.
+I note that that ceiling isn't
+the ceiling that could be reached by the ideal transliterator,
+as the MUSE data does contain some translations that are not transliterations
+(even when filtered to katanaka-English pairs).
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{r | c c c c}
+    Training Data & Accuracy & MRR@5 & CER* & CER \\
+    \midrule
+    eob & 0.500 & 0.578 & 0.154 & 0.197 \\
+    eob + pronunciation & 0.535 & 0.614 & 0.147 & 0.189 \\
+    \midrule
+    ideal model (memorized eob data) & 0.935 & 0.967 & 0.030 & 0.025 \\
+  \end{tabular}
+  \caption{Models evaluated on test split of eob data}
+\end{table}
+
+I conducted a normal training experiment on the eob data,
+and one with multitask learning as described in the methods section.
+Since the eob data contains multiple transliterations for some words
+I also report the ceiling achievable for each metric
+by a deterministic transliterator.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{r | c c c c}
+    Model & 1 - WER & WER & CER \\
+    \midrule
+    Seq2Seq, bidirectional one layer GRU & 0.454 & 0.546 & .226 \\
+    best Seq2Seq model & .498 & .502 & .202 \\
+    best of any model & .498 & .502 & .181 \\
+  \end{tabular}
+  \caption{Rosca and Breuel \cite{Rosca2016SequencetosequenceNN} (Google neural
+    transliteration paper)}
+\end{table}
+
+For comparison I reprint excerpted results
+from Rosca and Breuel \cite{Rosca2016SequencetosequenceNN}.
+They are not exactly comparable
+because we do not have access to the test split they used.
+Furthermore,
+they report a word error rate,
+but the calculation of words when comparing katakana strings
+isn't trivial or explained in their paper.
+However,
+one minus the word error rate
+can be treated as a reasonable estimate of accuracy.
+By that estimate our results are in the same ballpark,
+indeed our results for learning transliteration
+with a Seq2Seq model and no multitask learning
+are within a few tenths of a percent of eachother.
+We count ourselves rather lucky,
+as they performed comparatively exhaustive hyperparameter tuning
+and used much larger models.
+
+The 53.5\% accuracy result with multitask learning
+is better than any result in the baseline paper,
+but a 3.5\% delta seems weak
+in the context of larger deltas between other model architectures
+that they report results for
+(see difference between the bidirectional GRU and the best Seq2Seq).
+
 \section*{Conclusions}
+
+
 
 \section*{Individual Tasks}
 
