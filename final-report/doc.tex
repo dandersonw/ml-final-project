@@ -182,16 +182,80 @@ target domain, and $W$ is simultaneously trained to "fool" the discriminator by 
 the generated words as similar to the target words as possible.
 
 While the learned $W$ roughly aligns the two embedding spaces, Conneau et al add two
-modifications to further align the spaces. First, a refinement procedure is proposed
-where the $W$ trained via the adversarial method is used to generate a synthetic
-parallel vocabulary, which is then used to minimize $WX-Y$ in a supervised manner.
-Second, they introduce a cross-domain similarity adaptation to mitigate the "hubness
-problem" (i.e. in high dimensional spaces, some points tend to be nearest neighbors
-to many other points).
+modifications to further align the spaces:
+
+First, a refinement procedure is proposed where the $W$ trained via the
+adversarial method is used to generate a synthetic parallel vocabulary, which is
+then used to minimize $WX-Y$ in a supervised manner. More specifically, they use
+the generated parallel vocabulary to apply the Procrustes solution (i.e.
+min $\|WX-Y\|_2 = UV^T$, where $U\Sigma V^T = SVD(YX^T)$). This is repeated several
+times, with the expectation being that the generated data improves each iteration.
+This approach can also be "kickstarted" in a supervised manner by simply applying
+the first iteration with a ground truth parallel vocabulary.
+
+Second, they introduce a cross-domain similarity adaptation, cross-domain similarity
+local scaling (CSLS), to mitigate the "hubness problem"
+(i.e. in high dimensional spaces, some points tend to be nearest neighbors
+to many other points). Specifically, they use the mean similarity of a source
+embedding translation ($Wx_s$) to its target K nearest neighbors:
+$$
+r_T(Wx_s)=\frac{1}{K}\sum_{y_t \in \mathcal{N}_T(Wx_s)} \text{cos}(Wx_s, y_t)
+$$
+where $\mathcal{N}_T(Wx_s)$ is the K nearest neighbors of the source embedding
+translation, and define the similarity metric as:
+$$
+\text{CSLS}(Wx_s,y_t)=2\text{cos}(Wx_s, y_t)-r_T(Wx_s)-r_S(y_t)
+$$
 
 \section*{Methods}
 
 \subsection*{Unsupervised Word Translation}
+
+We begin by downloading pre-trained monolingual word vectors for English, Japanese,
+and all the other languages we plan to run experiments with \cite{bojanowski2017enriching}.
+These are 300 dimensional word vectors trained on Wikipedia using fastText.
+Although this project's overall goal is to learn transliteration for the specific
+English-Japanese language pair, for this section we plan to more generally analyze
+how well the approach described in Word Translation Without Parallel Data generalizes
+to new language pairs, especially one of languages that are comparably as distant as
+the English-Japanese pair.
+
+Other than Japanese, we run experiments on the following languages paired with English:
+Spanish, French, Chinese, Portuguese, Hebrew, Hindi, Thai, Korean, and Arabic. This
+allows us to first reproduce their results on 3 language pairs, along with test their
+method's generalization on 7 new language pairs of varying similarity.
+
+As we are simply reproducing the results outlined in Word Translation Without Parallel
+Data, we use the same training architecture and methodology. Firstly, only the 200k
+most frequent words are loaded for training the mapping matrix $W$, and the 50k most
+frequent for the discriminator. A two layered feed forward neural network is used
+for the discriminator, with each hidden layer of size 2048, Leaky-ReLU activation
+functions and a dropout rate of 0.1. The default training parameters for
+both the discriminator and $W$ as described in the paper are a
+batch size of 32, learning rate of 0.1, learning rate decay of 0.95, smoothing
+coefficient of 0.2, epoch size of 250k and a learning rate shrink parameter of 0.5
+(i.e. whenever the unsupervised validation criterion decreases after a training epoch
+they divide the learning rate in half). Since we find that their proposed validation
+criterion does not correlate as well with word translation precision on new language
+pairs, we change this shrink parameter to 0.75.
+
+For the mapping matrix $W$'s update rule, an orthogonal constrant is imposed, where
+$\beta=0.01$:
+$$
+W \leftarrow (1 + \beta)W - \beta(WW^T)W
+$$
+
+Finally, the proposed validation metric CSLS is used with the 10k most frequent
+source words for model evaluation (and when deciding to shrink the learning rate
+during training).
+
+When generating the synthetic parallel data to be used for transliteration, we take
+the aligned Japanese embedding space with the best word translation precision
+@ $\text{k}=1$ and generate proposed translations for the 50k most frequent
+source words using CSLS. We choose the top 50k words since that is the largest
+amount our computer can handle to perform CSLS on at the same time. While we could
+run vanilla K nearest neighbors in "batches", this produces worse translations
+since the hubness problem persists.
 
 \subsection*{Transliteration}
 
