@@ -51,7 +51,7 @@ def main():
         from_token = row[from_script_name]
         if (not valid_raw_str(from_token, from_script)
             or (args.frequency_cutoff is not None
-                and row['frequency_rank'] > args.frequency_cutoff)):
+                and row['frequency_rank'] < args.frequency_cutoff)):
             continue
 
         num_output = 0
