@@ -159,7 +159,7 @@ Japanese has also taken loanwords from other languages
 that are written in katakana,
 some of which may conflict with English words.
 An example is ナトリウム,
-translated from the Latin natrium,
+from the Latin natrium,
 meaning sodium (consider the Na elemental abbreviation).
 The hope is that clever matching of English words
 will allow useful transcription pairs to be found.
@@ -194,6 +194,133 @@ to many other points).
 \subsection*{Unsupervised Word Translation}
 
 \subsection*{Transliteration}
+
+\subsubsection*{Data}
+
+We use a few external sources of data.
+Facebook Research provides a ground truth English-Japanese dictionary
+of the same sort as is used for their evaluation of word translation,
+available on their GitHub
+\footnote{https://github.com/facebookresearch/MUSE}.
+It contains about 14,000 translations of an English word to a katakana string.
+We used this dictionary for evaluating the transliteration model
+we learn on generated pairs.
+Our thinking was that Facebook's ground truth dictionary
+should be alike to the pairs we hope to generate from word translation
+using their method.
+We will refer to it as the ``muse'' data.
+A concrete way in which that is true is that
+there are no translation pairs with two English words,
+unlike some other transliteration data available.
+We use the dataset available here
+\footnote{https://github.com/eob/english-japanese-transliteration}
+because it is freely available,
+of decent quality,
+and referenced in the Google paper\cite{Rosca2016SequencetosequenceNN}
+we use as a baseline.
+We will refer to it as the ``eob'' data.
+CMU makes available a large dataset of English words and their pronunciations
+\footnote{http://www.speech.cs.cmu.edu/cgi-bin/cmudict},
+which we will refer to as the ``cmu'' data.
+
+\subsubsection*{Learning Transliteration: Basic}
+
+Considering just the bird's eye view of the task
+as transforming a sequence of characters to another sequence of characters,
+our first thought was to use a sequence-to-sequence model
+like the well known Google neural machine translation model
+\cite{Wu2016GooglesNM}.
+Not surprisingly,
+some people at Google did try that \cite{Rosca2016SequencetosequenceNN}
+and found that the results were highly competitive.
+Since attentional sequence-to-sequence models \cite{Bahdanau2015NeuralMT}
+are so well known,
+we won't describe the basic architecture here.
+
+Treating words as just sequences of characters
+diverges from a lot of transliteration methods
+in ignoring pronunciation.
+The motivation for that
+is that we don't have pronunciation information for translation-pairs
+that we get out of the word translation half of the project.
+
+All of the networks we use operate on a character basis.
+Each script is a separate vocabulary;
+the Japanese decoder can output only katakana characters.
+We operate on composed representations of Unicode characters:
+e.g. ``ガ'' is represented by the atomic \texttt{U+X30AC KATAKANA LETTER GA},
+not ``カ'' \texttt{U+X30AB KATAKANA LETTER KA} followed by
+``゛''\texttt{U+X3099 COMBINING KATAKANA-HIRAGANA VOICED-SOUND MARK}.
+
+\subsubsection*{Learning Transliteration: Multitask with Pronunciation}
+
+We note above our intuition that the ideal transliteration model
+must consider both the spelling and pronunciation of an English word.
+Coincidentally,
+the authors of the Google neural transliteration paper
+\cite{Rosca2016SequencetosequenceNN}
+note that they too think it would be a good idea
+to feed the transliteration model pronunciation information.
+
+We chose to achieve that not by
+explicitly integrating a pronunciation layer into our model,
+but by formulating a multitask learning problem.
+The first task is to predict the pronunciation of an English word,
+and the second to predict the transliteration of an English word.
+We use the same basic sequence-to-sequence architecture for both problems.
+
+% TODO...
+
+\subsubsection*{Evaluation}
+
+As mentioned in the data section,
+we evaluate the transliteration model learned on our generated word translations
+on translations pairs excerpted from an English-Japanese dictionary
+provided by Facebook research.
+For the other transliteration models
+we hold out 10\% of the eob data as a test set.
+
+Our personal opinion is that evaluating the correctness
+of a transliterator is not that straightforward.
+Nevertheless,
+we will use a few straightforward measures
+that appear in the transliteration literature.
+The first is simply accuracy:
+for what proportion of the input words
+does the transliterator return the correct transliteration.
+The second is Levenshtein distance:
+the number of simple edits necessary to change the output to
+the correct transliteration
+\footnote{https://en.wikipedia.org/wiki/Levenshtein\_distance}.
+The third is mean reciprocal rank (MRR):
+a measure of how far down the list of possible results
+(ordered in direction of decreasing probability)
+the correct answer is
+\footnote{https://en.wikipedia.org/wiki/Mean\_reciprocal\_rank}.
+
+Typically Levenshtein distance is normalized in a few ways
+when evaluating transliteration models.
+The first way is normalizing by the length of the ground-truth answer,
+to get a character error rate (CER):
+$$CER(gold, predicted) = \frac{Levenshtein(gold, predicted)}{length(gold)}$$.
+Word error rate (WER) is the same as CER,
+except it is calculated on a word-level instead of character-level.
+It is used by the Google neural transliteration paper,
+although in the case of evaluating katakana transliterations
+``word-level'' is really problematic
+(there is no trivial way to segment katakana strings into words).
+We will instead consider accuracy,
+on the basis that $1 - WER$
+is a generous but approximately reasonable estimate of accuracy.
+
+Although it is not connected to any of the papers we cite,
+we also report a modified CER,
+which we denote CER*.
+It is modified in that the Levenshtein distance
+is adjusted to better represent the abstract distance between katakana strings.
+For example,
+we say that it costs only one half a point
+to insert a gemination (consonant-doubling) mark.
 
 \section*{Results}
 
