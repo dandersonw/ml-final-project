@@ -8,6 +8,7 @@
 \usepackage{booktabs}
 \usepackage{url}
 \usepackage{xeCJK}
+\usepackage{chngpage}
 \setCJKmainfont{IPAMincho}
 
 \setlength{\parindent}{4em}
@@ -244,7 +245,8 @@ coefficient of 0.2, epoch size of 250k and a learning rate shrink parameter of 0
 (i.e. whenever the unsupervised validation criterion decreases after a training epoch
 they divide the learning rate in half). Since we find that their proposed validation
 criterion does not correlate as well with word translation precision on new language
-pairs, we change this shrink parameter to 0.75.
+pairs, we change this shrink parameter to 0.75. Moreover, we normalize all embeddings
+by subtracting the mean embedding.
 
 For the mapping matrix $W$'s update rule, an orthogonal constrant is imposed, where
 $\beta=0.01$:
@@ -259,6 +261,13 @@ source words using CSLS. We choose the top 50k words since that is the largest
 amount our computer can handle to perform CSLS on at the same time. While we could
 run vanilla K nearest neighbors in "batches", this produces worse translations
 since the hubness problem persists.
+
+Although CSLS aims to reduce hubs, it does not completely solve the problem.
+Therefore we first remove certain words from the target dictionary that qualitatively
+show up as incorrect translations for many source words, these are mainly articles
+and adverbs (e.g. and, to, the, moreover, at, nevertheless, then, likewise, etc.).
+Then before transliteration, we filter out translated words that appear more than
+20 times.
 
 \subsection*{Evaluation}
 
@@ -414,6 +423,97 @@ to insert a gemination (consonant-doubling) mark.
 \section*{Results}
 
 \subsection*{Unsupervised Word Translation}
+
+\subsection*{Japanese-English}
+
+% Japanese unsupervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc||}
+    \hline
+    & En-Ja & Ja-En \\
+    \hline
+    Precision@1 &  0.00 &  0.00 \\
+    CSLS        & 0.497 & 0.518 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+% Japanese supervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc||}
+    \hline
+    & En-Ja & Ja-En \\
+    \hline
+    Precision@1 & 12.75 &  7.72 \\
+    CSLS        & 0.508 & 0.534 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsection*{Other Language Pairs}
+
+% Repro unsupervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
+    \hline
+    Precision@1 & 82.80 & 83.13 & 82.87 & 82.40 & 30.73 & 33.40 \\
+    CSLS        & 0.694 & 0.682 & 0.680 & 0.670 & 0.593 & 0.722 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+% Repro Supervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
+    \hline
+    Precision@1 & 82.27 & 83.47 & 82.87 & 81.93 & 42.73 & 25.13 \\
+    CSLS        & 0.700 & 0.715 & 0.722 & 0.705 & 0.576 & 0.596 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+% New unsupervised results
+\begin{table}
+  \tabcolsep=0.07cm
+  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
+    \hline
+    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
+    & En-He & He-En & En-Hi & Hi-En \\
+    \hline
+    Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 &  0.00 &  0.00
+      & 37.00 &  0.00 &  0.00 &  0.00 \\
+    CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 & 0.465 & 0.498
+      & 0.582 & 0.451 & 0.477 & 0.452 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+% New supervised results
+\begin{table}
+  \centering
+  \tabcolsep=0.07cm
+  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
+    \hline
+    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
+    & En-He & He-En & En-Hi & Hi-En \\
+    \hline
+    Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 & 22.53 & 19.97
+      & 40.20 & 54.14 & 33.60 & 44.54 \\
+    CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 & 0.585 & 0.581
+      & 0.641 & 0.612 & 0.636 & 0.615 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsection*{CSLS Analysis}
 
 \subsection*{Transliteration}
 
