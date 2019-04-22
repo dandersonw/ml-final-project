@@ -535,7 +535,7 @@ For decoding we use beam search with ten beams.
   \centering
   \begin{tabular}{r | c c c c}
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \midrule
+    \hline
     our pairs & .007 & 0.011 & 0.741 & 0.866 \\
     our pairs + pronunciation & 0.021 & 0.031 & 0.717 & 0.844 \\
   \end{tabular}
@@ -551,16 +551,16 @@ As you can see,
 the model did not succeed in learning transliteration
 from the dataset we generated with word translation.
 Adding in multitask learning with pronunciation does triple the accuracy,
-but only to 2.1\%.
+but even tripled it is still only 2.1\%.
 
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \midrule
+    \hline
     eob & .403 & 0.486 & 0.240 & 0.312 \\
     eob + pronunciation & 0.441 & 0.526 & 0.222 & 0.290 \\
-    \midrule
+    \hline
     ideal model (memorized MUSE data) & 0.959 & 0.979 & 0.021 & 0.016\\
   \end{tabular}
   \caption{Other models evaluated on MUSE data}
@@ -580,10 +580,10 @@ as the MUSE data does contain some translations that are not transliterations
   \centering
   \begin{tabular}{r | c c c c}
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \midrule
+    \hline
     eob & 0.500 & 0.578 & 0.154 & 0.197 \\
     eob + pronunciation & 0.535 & 0.614 & 0.147 & 0.189 \\
-    \midrule
+    \hline
     ideal model (memorized eob data) & 0.935 & 0.967 & 0.030 & 0.025 \\
   \end{tabular}
   \caption{Models evaluated on test split of eob data}
@@ -599,7 +599,7 @@ by a deterministic transliterator.
   \centering
   \begin{tabular}{r | c c c c}
     Model & 1 - WER & WER & CER \\
-    \midrule
+    \hline
     Seq2Seq, bidirectional one layer GRU & 0.454 & 0.546 & .226 \\
     best Seq2Seq model & .498 & .502 & .202 \\
     best of any model & .498 & .502 & .181 \\
@@ -614,18 +614,20 @@ They are not exactly comparable
 because we do not have access to the test split they used.
 Furthermore,
 they report a word error rate,
-but the calculation of words when comparing katakana strings
+but the determination of words when comparing katakana strings
 isn't trivial or explained in their paper.
-However,
-one minus the word error rate
-can be treated as a reasonable estimate of accuracy.
+We can try and estimate their accuracy
+by one minus the word error rate,
+which might be exactly correct if they don't segment katakana strings.
 By that estimate our results are in the same ballpark,
 indeed our results for learning transliteration
 with a Seq2Seq model and no multitask learning
 are within a few tenths of a percent of eachother.
-We count ourselves rather lucky,
+That is rather lucky,
 as they performed comparatively exhaustive hyperparameter tuning
 and used much larger models.
+It is possible that the test split we randomly created
+is easier than the test split they used.
 
 The 53.5\% accuracy result with multitask learning
 is better than any result in the baseline paper,
@@ -633,12 +635,51 @@ but a 3.5\% delta seems weak
 in the context of larger deltas between other model architectures
 that they report results for
 (see difference between the bidirectional GRU and the best Seq2Seq).
+Furthermore,
+if it is the case that their test split was harder
+then it may not represent an improvement over what they achieved.
+Although not explicitly quantified here
+(for lack of time in the home stretch of the project)
+our subjective impression,
+from running various experiments over the course of the project,
+is that using the pronunciation data
+did consistently improve the accuracy of the model.
 
 \section*{Conclusions}
 
+A multitask learning approach for utilizing pronunciation information
+to improve English to Japanese transliteration
+showed promising preliminary results,
+but ones that were weak relative to the scale of variation
+between various model architectures as reported
+in the baseline paper \cite{Rosca2016SequencetosequenceNN}.
+The next step to proving the usefulness of our approach
+would be to conduct a more thorough study,
+varying the model architecture and performing cross-validation
+to show that the pronunciation data is consistently helpful.
 
+Another possibility to consider
+is changing the way we handle the multiple scripts.
+Since we have separate decoders in our approach,
+the supervision from the pronunciation data
+can only help transliteration by affecting the encoder.
+One can easily imagine creating a single decoder
+which could output multiple target scripts:
+sharing decoders might allow the supervision from pronunciation
+to benefit transliteration in both encoding and decoding.
 
 \section*{Individual Tasks}
+
+Derick had full responsibility for the transliteration half of the project.
+That included preprocessing our outside data sources,
+writing code for the models/training/evaluation,
+and running experiments.
+
+Although Derick has worked on some closely related things before,
+this project is not part of or an extension of any project
+that either author has done before.
+It is also not likely that this work will become a part of any future project.
+
 
 \bibliography{doc}{}
 \bibliographystyle{plain}
