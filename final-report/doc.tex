@@ -125,7 +125,7 @@ is that theirs requires a well trained model of Japanese and English phonetics.
 We may choose to utilize an English phonetic model,
 but don't require either.
 Furthermore,
-they impose constraints and start with favorable intializations
+they impose constraints and start with favorable initializations
 based on prior knowledge about transliteration.
 We will utilize the fact
 that English words are translated into katakana,
@@ -225,7 +225,7 @@ $$
 
 \subsubsection*{Data}
 
-We begin by downloading pre-trained monolingual word vectors for English, Japanese,
+We begin by downloading pretrained monolingual word vectors for English, Japanese,
 and all the other languages we plan to run experiments with \cite{bojanowski2017enriching}.
 These are 300 dimensional word vectors trained on Wikipedia using fastText.
 Although this project's overall goal is to learn transliteration for the specific
@@ -252,7 +252,7 @@ batch size of 32, learning rate of 0.1, learning rate decay of 0.95, smoothing
 coefficient of 0.2, epoch size of 250k and a learning rate shrink parameter of 0.5
 (i.e. whenever the unsupervised validation criterion decreases after a training epoch
 they divide the learning rate in half). We also apply the iterative refinement
-procedure 8 times after the intial adversarial training, starting with the model with
+procedure 8 times after the initial adversarial training, starting with the model with
 the highest CSLS score. Optimization is done by stochastic gradient descent.
 Since we find that their proposed validation
 criterion does not correlate as well with word translation precision on new language
@@ -260,7 +260,7 @@ pairs, we change this shrink parameter to 0.75. Moreover, we normalize all embed
 by subtracting the mean embedding.
 
 \noindent
-For the mapping matrix $W$'s update rule, an orthogonal constrant is imposed, where
+For the mapping matrix $W$'s update rule, an orthogonal constraint is imposed, where
 $\beta=0.01$:
 $$
 W \leftarrow (1 + \beta)W - \beta(WW^T)W
@@ -440,14 +440,14 @@ to insert a gemination (consonant-doubling) mark.
 
 \subsubsection*{Reproducing Results}
 
-We first attempt to reproduce the results of Word Translation Without Parellel
+We first attempt to reproduce the results of Word Translation Without Parallel
 Data on three language pairs: English paired with Spanish, French and Chinese.
 We use all the same hyperparameters as reported in the paper with the exception
 of the learning rate shrink parameter, which we change from 0.5 to 0.75, and
 center normalization, which they only do with Chinese.
 Moreover, the authors do not report the epoch size or number of training epochs
 for the unsupervised approach. It should be noted though that one of the authors 
-mention on their Github repository that they generally used smaller epoch sizes
+mention on their GitHub repository that they generally used smaller epoch sizes
 with more training epochs than the code's default of size 250k trained for 10
 epochs. They also do not report the number of times the refinement procedure
 is applied after training. This implies that each language pair was probably
@@ -455,7 +455,7 @@ trained on different epoch sizes, number of epochs and number of refinement
 iterations, making direct comparison difficult.
 
 For the unsupervised results, we choose the model with the highest CSLS score
-and for the supervised resulls, the model with the highest precision at
+and for the supervised results, the model with the highest precision at
 $\text{k}=1$. In some cases, the model with the highest precision did not have
 the highest CSLS score in the unsupervised case, and vice versa in the supervised
 case, which we discuss in depth in a later section.
@@ -553,7 +553,7 @@ with actual word translation precision, which we did not observe when reproducin
 the three language pairs above. Since the refinement begins with the model with
 the highest CSLS score, if its starting with a bad model, it is unlikely to
 perform well, since the model needs to be good enough to begin with or else the
-generated data won't help (as occured with the supervised approaches). Moreover,
+generated data won't help (as occurred with the supervised approaches). Moreover,
 since the CSLS metric is what determines whether the learning rate should shrink,
 if the model is actually improving but the learning rate keeps decreasing, this
 also hinders the final performance. We analyze this correlation between the CSLS
@@ -764,7 +764,7 @@ that could be reached by memorizing the test data.
 We note that that ceiling isn't
 the ceiling that could be reached by the ideal transliterator,
 as the MUSE data does contain some translations that are not transliterations
-(even when filtered to katanaka-English pairs).
+(even when filtered to katakana-English pairs).
 
 \begin{table}[h]
   \centering
@@ -820,7 +820,7 @@ which might be exactly correct if they don't segment katakana strings.
 By that estimate our results are in the same ballpark,
 indeed our results for learning transliteration
 with a Seq2Seq model and no multitask learning
-are within a few tenths of a percent of eachother.
+are within a few tenths of a percent of each other.
 That is rather lucky,
 as they performed comparatively exhaustive hyperparameter tuning
 and used much larger models.
