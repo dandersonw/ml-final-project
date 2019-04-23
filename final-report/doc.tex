@@ -553,48 +553,79 @@ Third, we observe that the domain-adversarial approach is highly sensitive to
 hyperparameters, which is consistent with previous work on similar adversarial
 methods (e.g. GANs). We attempt to do a qualitative manual grid search for
 the best hyperparameters, but were unable to get higher than 0.5 precision @
-$\text{k}=1$. The large search space and training time (~30 minutes) caused
-this to be inefficient. We did however observe cases where the precision increased
-to about 2, but the CSLS metric did not reflect the improvements and therefore
-was not selected.
+$\text{k}=1$ (We notice that doubling the learning rate and decreasing the epoch
+size improves performance). The large search space and training time (~30 minutes)
+caused this to be inefficient. We did however observe cases where the precision
+increased to about 2, but the CSLS metric did not reflect the improvements and
+therefore was not selected.
 
 We choose the model trained via the supervised approach, with 7.72 precision, to
 generate the vocabulary to use for the transliteration task.
 
 \subsection*{New Language Pairs}
 
-%% New unsupervised results
-%\begin{table}
-%  \tabcolsep=0.07cm
-%  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
-%    \hline
-%    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
-%    & En-He & He-En & En-Hi & Hi-En \\
-%    \hline
-%    Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 &  0.00 &  0.00
-%      & 37.00 &  0.00 &  0.00 &  0.00 \\
-%    CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 & 0.465 & 0.498
-%      & 0.582 & 0.451 & 0.477 & 0.452 \\
-%    \hline
-%  \end{tabular}
-%\end{table}
-%
-%% New supervised results
-%\begin{table}
-%  \centering
-%  \tabcolsep=0.07cm
-%  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
-%    \hline
-%    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
-%    & En-He & He-En & En-Hi & Hi-En \\
-%    \hline
-%    Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 & 22.53 & 19.97
-%      & 40.20 & 54.14 & 33.60 & 44.54 \\
-%    CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 & 0.585 & 0.581
-%      & 0.641 & 0.612 & 0.636 & 0.615 \\
-%    \hline
-%  \end{tabular}
-%\end{table}
+To see if these poor results were exclusive to Japanese, we run experiments
+on 7 more new language pairs.
+
+% New unsupervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En \\
+    \hline
+    Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 \\
+    CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 \\
+    \hline
+  \end{tabular}
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Th & Th-En & En-He & He-En & En-Hi & Hi-En \\
+    \hline
+    Precision@1 &  0.00 &  0.00 & 37.00 &  0.00 &  0.00 &  0.00 \\
+    CSLS        & 0.465 & 0.498 & 0.582 & 0.451 & 0.477 & 0.452 \\
+    \hline
+  \end{tabular}
+  \caption{Unsupervised results for new language pairs.}
+\end{table}
+
+% New supervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En \\
+    \hline
+    Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 \\
+    CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 \\
+    \hline
+  \end{tabular}
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Th & Th-En & En-He & He-En & En-Hi & Hi-En \\
+    \hline
+    Precision@1 & 22.53 & 19.97 & 40.20 & 54.14 & 33.60 & 44.54 \\
+    CSLS        & 0.585 & 0.581 & 0.641 & 0.612 & 0.636 & 0.615 \\
+    \hline
+  \end{tabular}
+  \caption{Supervised results for new language pairs.}
+\end{table}
+
+From the above tables, we observe that like with Japanese, several
+language pairs are unable to get a nonzero precision, including Thai,
+Hindi, Korean-English, Hebrew-English and English-Arabic. What is
+interesting are the cases where one direction gets zero precision
+while translating in the other one performs well. Intuitively, the
+precision would be comparable when translating in either direction as
+seen in the supervised results, since we are just aligning two
+embedding spaces. The fact that this does not occur with the
+unsupervised approach implies that initialization may greatly influence
+the performance. Also we see the same problem as noted in the previous
+section on how the CSLS metric does not correlate well with precision.
+In the case of the Arabic-English pair, the refinement procedure improves
+the precision from 15.3 to 48.5. Again, if the refinement procedure
+begins with a poorly performing model, it will not be able to improve
+significantly.
 
 \subsection*{CSLS Analysis}
 
