@@ -243,7 +243,10 @@ both the discriminator and $W$ as described in the paper are a
 batch size of 32, learning rate of 0.1, learning rate decay of 0.95, smoothing
 coefficient of 0.2, epoch size of 250k and a learning rate shrink parameter of 0.5
 (i.e. whenever the unsupervised validation criterion decreases after a training epoch
-they divide the learning rate in half). Since we find that their proposed validation
+they divide the learning rate in half). We also apply the iterative refinement
+procedure 8 times after the intial adversarial training, starting with the model with
+the highest CSLS score. Optimization is done by stochastic gradient descent.
+Since we find that their proposed validation
 criterion does not correlate as well with word translation precision on new language
 pairs, we change this shrink parameter to 0.75. Moreover, we normalize all embeddings
 by subtracting the mean embedding.
@@ -437,8 +440,10 @@ Moreover, the authors do not report the epoch size or number of training epochs
 for the unsupervised approach. It should be noted though that one of the authors 
 mention on their Github repository that they generally used smaller epoch sizes
 with more training epochs than the code's default of size 250k trained for 10
-epochs. This implies that each language pair may have been trained on different
-epoch sizes and number of epochs, making direct comparison a bit difficult.
+epochs. They also do not report the number of times the refinement procedure
+is applied after training. This implies that each language pair was probably
+trained on different epoch sizes, number of epochs and number of refinement
+iterations, making direct comparison difficult.
 
 For the unsupervised results, we choose the model with the highest CSLS score
 and for the supervised resulls, the model with the highest precision @
@@ -488,7 +493,12 @@ significantly underperform.
 
 Unfortunately, unsupervised word translation with the Japanese-English language
 pair and the default hyperparameters does not work. We are unable to get a
-non-zero precision at $\text{k}=1$.
+non-zero precision at $\text{k}=1$. Supervised word translation works better,
+with En-Ja performing better than Ja-En. Also, the supervised method gets the best
+precision on the first iteration of applying the Procrustes solution. This is most
+likely because the first iteration does not get a high enough precision in the 
+first place, causing the synthetic parallel data to be too noisy to improve the
+model.
 
 % Japanese unsupervised results
 \begin{table}[h]
@@ -518,40 +528,73 @@ non-zero precision at $\text{k}=1$.
   \caption{Supervised results for Japanese-English language pair with default hyperparameters.}
 \end{table}
 
+There are many reasons we believe is causing the unsupervised approach to not work.
+
+First, a quick pass through the Japanese word vectors shows some incorrect/noisy
+tokenization. For instance, "さらに共和党予備選挙で各候補に投じられた票数よりも多かった"
+is a single token, which Google translates to "Furthermore, it was more than
+the number of votes cast for each candidate in Republican primaries". Trying to
+align word embeddings that are noisy to begin with will definitely hurt the final
+precision of the model, however further analysis is required to determine how
+many of these mistakes are present.
+
+Second, we notice that the CSLS metric seems to correlate very poorly
+with actual word translation precision, which we did not observe when reproducing
+the three language pairs above. Since the refinement begins with the model with
+the highest CSLS score, if its starting with a bad model, it is unlikely to
+perform well, since the model needs to be good enough to begin with or else the
+generated data won't help (as occured with the supervised approaches). Moreover,
+since the CSLS metric is what determines whether the learning rate should shrink,
+if the model is actually improving but the learning rate keeps decreasing, this
+also hinders the final performance. We analyze this correlation between the CSLS
+score and word translation precision in more depth in a later section.
+
+Third, we observe that the domain-adversarial approach is highly sensitive to
+hyperparameters, which is consistent with previous work on similar adversarial
+methods (e.g. GANs). We attempt to do a qualitative manual grid search for
+the best hyperparameters, but were unable to get higher than 0.5 precision @
+$\text{k}=1$. The large search space and training time (~30 minutes) caused
+this to be inefficient. We did however observe cases where the precision increased
+to about 2, but the CSLS metric did not reflect the improvements and therefore
+was not selected.
+
+We choose the model trained via the supervised approach, with 7.72 precision, to
+generate the vocabulary to use for the transliteration task.
+
 \subsection*{New Language Pairs}
 
-% New unsupervised results
-\begin{table}
-  \tabcolsep=0.07cm
-  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
-    \hline
-    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
-    & En-He & He-En & En-Hi & Hi-En \\
-    \hline
-    Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 &  0.00 &  0.00
-      & 37.00 &  0.00 &  0.00 &  0.00 \\
-    CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 & 0.465 & 0.498
-      & 0.582 & 0.451 & 0.477 & 0.452 \\
-    \hline
-  \end{tabular}
-\end{table}
-
-% New supervised results
-\begin{table}
-  \centering
-  \tabcolsep=0.07cm
-  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
-    \hline
-    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
-    & En-He & He-En & En-Hi & Hi-En \\
-    \hline
-    Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 & 22.53 & 19.97
-      & 40.20 & 54.14 & 33.60 & 44.54 \\
-    CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 & 0.585 & 0.581
-      & 0.641 & 0.612 & 0.636 & 0.615 \\
-    \hline
-  \end{tabular}
-\end{table}
+%% New unsupervised results
+%\begin{table}
+%  \tabcolsep=0.07cm
+%  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
+%    \hline
+%    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
+%    & En-He & He-En & En-Hi & Hi-En \\
+%    \hline
+%    Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 &  0.00 &  0.00
+%      & 37.00 &  0.00 &  0.00 &  0.00 \\
+%    CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 & 0.465 & 0.498
+%      & 0.582 & 0.451 & 0.477 & 0.452 \\
+%    \hline
+%  \end{tabular}
+%\end{table}
+%
+%% New supervised results
+%\begin{table}
+%  \centering
+%  \tabcolsep=0.07cm
+%  \begin{tabular}{||r|cc|cc|cc|cc|cc|cc||}
+%    \hline
+%    & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En & En-Th & Th-En
+%    & En-He & He-En & En-Hi & Hi-En \\
+%    \hline
+%    Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 & 22.53 & 19.97
+%      & 40.20 & 54.14 & 33.60 & 44.54 \\
+%    CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 & 0.585 & 0.581
+%      & 0.641 & 0.612 & 0.636 & 0.615 \\
+%    \hline
+%  \end{tabular}
+%\end{table}
 
 \subsection*{CSLS Analysis}
 
