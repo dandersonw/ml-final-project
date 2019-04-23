@@ -9,7 +9,9 @@
 \usepackage{url}
 \usepackage{xeCJK}
 \usepackage{chngpage}
+\usepackage{float}
 \setCJKmainfont{IPAMincho}
+\graphicspath{ {images/} }
 
 \setlength{\parindent}{4em}
 \setlength{\parskip}{1em}
@@ -613,8 +615,10 @@ on 7 more new language pairs.
 
 From the above tables, we observe that like with Japanese, several
 language pairs are unable to get a nonzero precision, including Thai,
-Hindi, Korean-English, Hebrew-English and English-Arabic. What is
-interesting are the cases where one direction gets zero precision
+Hindi, Korean-English, Hebrew-English and English-Arabic.
+A significant reason why Thai and Hindi perform poorly is most likely
+because they have significant smaller word vectors to align. But what
+is interesting are the cases where one direction gets zero precision
 while translating in the other one performs well. Intuitively, the
 precision would be comparable when translating in either direction as
 seen in the supervised results, since we are just aligning two
@@ -624,10 +628,70 @@ the performance. Also we see the same problem as noted in the previous
 section on how the CSLS metric does not correlate well with precision.
 In the case of the Arabic-English pair, the refinement procedure improves
 the precision from 15.3 to 48.5. Again, if the refinement procedure
-begins with a poorly performing model, it will not be able to improve
-significantly.
+begins with a poorly performing model, it will not be able to improve.
 
 \subsection*{CSLS Analysis}
+
+As noted several times in the previous sections, the CSLS metric is a
+significant cause for poor model performance. For an unsupervised
+validation criterion to work, it must correlate well with an equivalent
+supervised criterion, like word translation precision. Conneau et al.
+briefly touch upon this by plotting both the unsupervised metric and
+precision over training epochs, showing a strong correlation between the two.
+However they do not specify which languages those metrics correspond to. We
+claim that this crucially influences the correlation.
+
+% Correlation
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|c|c||}
+    \hline
+    Pair & P@1 & $\text{R}^2$ \\
+    \hline
+    En-Es & 82.8 & 0.86 \\
+    Es-En & 83.1 & 0.86 \\
+    \hline
+    En-Fr & 82.9 & 0.89 \\
+    Fr-En & 82.4 & 0.87 \\
+    \hline
+    En-Zh & 30.7 & 0.02 \\
+    Zh-En & 33.4 & 0.71 \\
+    \hline
+    En-Pt & 79.2 & 0.78 \\
+    Pt-En & 79.3 & 0.83 \\
+    \hline
+    En-Ko & 13.2 & 0.78 \\
+    Ko-En &  0.0 &  0.0 \\
+    \hline
+    En-Ar &  0.0 &  0.0 \\
+    Ar-En & 48.5 & 1.00 \\
+    \hline
+    En-He & 37.0 & 0.91 \\
+    He-En &  0.0 &  0.0 \\
+    \hline
+  \end{tabular}
+  \caption{Unsupervised precision @ $\text{K}=1$ and $\text{R}^2$ values for various language pairs.}
+\end{table}
+
+From the above table, we observe that as the language pairs become more distant, the
+difference in correlation coefficients between both translation directions becomes
+more significant. Closely related language pairs such as English-Spanish, English-French
+and English-Portuguese have both precision and $\text{R}^2$ values that are roughly
+the same. But as the language pairs become more distant (e.g. English-Chinese,
+English-Arabic, English-Hebrew), the difference in the two values increase greatly.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{spanishCorr}
+  \includegraphics[width=0.6\textwidth]{frenchCorr}
+  \includegraphics[width=0.6\textwidth]{chineseCorr}
+  \includegraphics[width=0.6\textwidth]{arabicCorr}
+  \caption{Unsupervised CSLS Score vs. Word Translation Precision graphs for 4 language pairs}
+\end{figure}
+
+As stated before, if the model validation criterion does not correlate with
+precision, there is little chance it will successfully improve. This
+explains why language pairs with low correlation also achieve low precision values.
 
 \subsection*{Transliteration}
 
