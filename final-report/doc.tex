@@ -292,7 +292,7 @@ we learn on generated pairs.
 Our thinking was that Facebook's ground truth dictionary
 should be alike to the pairs we hope to generate from word translation
 using their method.
-We will refer to it as the ``muse'' data.
+We will refer to it as the ``MUSE'' data.
 A concrete way in which that is true is that
 there are no translation pairs with two English words,
 unlike some other transliteration data available.
@@ -305,7 +305,7 @@ we use as a baseline.
 We will refer to it as the ``eob'' data.
 CMU makes available a large dataset of English words and their pronunciations
 \footnote{http://www.speech.cs.cmu.edu/cgi-bin/cmudict},
-which we will refer to as the ``cmu'' data.
+which we will refer to as the ``CMU'' data.
 
 \subsubsection*{Learning Transliteration: Basic}
 
@@ -355,6 +355,8 @@ and the second to predict the transliteration of an English word.
 The CMU pronunciation dictionary represents pronunciation
 as a sequence of tokens,
 e.g. ``Japanese'' is ``JH AE2 P AH0 N IY1 Z''.
+(Note that the tokens in ``JH AE2 P AH0 N IY1 Z''
+are ``JH'', ``AE2'', ``P'', etc)
 We treat predicting the pronunciation exactly the same as
 transliterating into another script.
 
@@ -574,18 +576,19 @@ For decoding we use beam search with ten beams.
   \begin{tabular}{r | c c c c}
     Training Data & Accuracy & MRR@5 & CER* & CER \\
     \hline
-    our pairs & .007 & 0.011 & 0.741 & 0.866 \\
-    our pairs + pronunciation & 0.021 & 0.031 & 0.717 & 0.844 \\
+    our pairs & 0.007 & 0.011 & 0.741 & 0.866 \\
+    our pairs + CMU & 0.021 & 0.031 & 0.717 & 0.844 \\
   \end{tabular}
   \caption{Results of learning transliteration on our generated word
     translations. Evaluated on MUSE data}
+  \label{tab:our-muse}
 \end{table}
 
-I conducted an experiment to learn transliteration from word translations,
+We conducted an experiment to learn transliteration from word translations,
 according to the methods section above.
-I also conducted an experiment with multitask learning
+We also conducted an experiment with multitask learning
 using our translations for the Japanese script.
-As you can see,
+As you can see in Table \ref{tab:our-muse},
 the model did not succeed in learning transliteration
 from the dataset we generated with word translation.
 Adding in multitask learning with pronunciation does triple the accuracy,
@@ -596,20 +599,23 @@ but even tripled it is still only 2.1\%.
   \begin{tabular}{r | c c c c}
     Training Data & Accuracy & MRR@5 & CER* & CER \\
     \hline
-    eob & .403 & 0.486 & 0.240 & 0.312 \\
-    eob + pronunciation & 0.441 & 0.526 & 0.222 & 0.290 \\
+    eob & 0.403 & 0.486 & 0.240 & 0.312 \\
+    eob + CMU & 0.441 & 0.526 & 0.222 & 0.290 \\
     \hline
     ideal model (memorized MUSE data) & 0.959 & 0.979 & 0.021 & 0.016\\
   \end{tabular}
   \caption{Other models evaluated on MUSE data}
+  \label{tab:other-muse}
 \end{table}
 
-For comparison I evaluated the models trained on other data on the MUSE set.
+For comparison,
+Table \ref{tab:other-muse} contains the results of evaluating
+the models trained on other data on the MUSE set.
 Since the MUSE data has some ambiguity,
 i.e. it provides multiple translations for some words,
-I also calculate the ceiling for each metric
+We also calculate the ceiling for each metric
 that could be reached by memorizing the test data.
-I note that that ceiling isn't
+We note that that ceiling isn't
 the ceiling that could be reached by the ideal transliterator,
 as the MUSE data does contain some translations that are not transliterations
 (even when filtered to katanaka-English pairs).
@@ -620,17 +626,19 @@ as the MUSE data does contain some translations that are not transliterations
     Training Data & Accuracy & MRR@5 & CER* & CER \\
     \hline
     eob & 0.500 & 0.578 & 0.154 & 0.197 \\
-    eob + pronunciation & 0.535 & 0.614 & 0.147 & 0.189 \\
+    eob + CMU & 0.535 & 0.614 & 0.147 & 0.189 \\
     \hline
     ideal model (memorized eob data) & 0.935 & 0.967 & 0.030 & 0.025 \\
   \end{tabular}
   \caption{Models evaluated on test split of eob data}
+  \label{tab:eob-results}
 \end{table}
 
-I conducted a normal training experiment on the eob data,
-and one with multitask learning as described in the methods section.
+We conducted a normal training experiment on the eob data,
+and one with multitask learning as described in the methods section,
+and report the results in Table \ref{tab:eob-results}.
 Since the eob data contains multiple transliterations for some words
-I also report the ceiling achievable for each metric
+We also report the ceiling achievable for each metric
 by a deterministic transliterator.
 
 \begin{table}[h]
@@ -644,10 +652,12 @@ by a deterministic transliterator.
   \end{tabular}
   \caption{Rosca and Breuel \cite{Rosca2016SequencetosequenceNN} (Google neural
     transliteration paper)}
+  \label{tab:baseline-results}
 \end{table}
 
-For comparison I reprint excerpted results
-from Rosca and Breuel \cite{Rosca2016SequencetosequenceNN}.
+For comparison we reprint excerpted results
+from Rosca and Breuel \cite{Rosca2016SequencetosequenceNN}
+in Table \ref{tab:baseline-results}.
 They are not exactly comparable
 because we do not have access to the test split they used.
 Furthermore,
