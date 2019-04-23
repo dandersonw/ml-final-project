@@ -833,6 +833,20 @@ did consistently improve the accuracy of the model.
 
 \section*{Conclusions}
 
+While Conneau et al.'s Word Translation Without Parallel Data approach
+works well with closely related language pairs, it completely fails
+with the English-Japanese pair, along with pairs of comparable distance.
+The possible reasoning for this includes noisy pretrained language
+embeddings and a domain-adversarial approach that is highly sensitive
+to hyperparameters, but we claim that the predominant cause of this
+poor performance is the weak correlation between their proposed
+validation criterion and actual word translation precision.
+
+Future work in this task may include measuring performance when translating
+to an intermediate language first (i.e. Japanese \rightarrow Korean
+\rightarrow English), along with improving the validation criterion to
+deal with distant language pairs.
+
 A multitask learning approach for utilizing pronunciation information
 to improve English to Japanese transliteration
 showed promising preliminary results,
@@ -866,6 +880,16 @@ this project is not part of or an extension of any project
 that either author has done before.
 It is also not likely that this work will become a part of any future project.
 
+Tim had full responsibility for the word translation without parallel data
+half of the project, which included reproducing the results of the paper,
+modifying the released codebase to generate translations for the
+transliteration half of the project, reproducing the results on the new
+language pairs, and the analysis on the correlation between the proposed
+metric and word translation precision.
+
+Tim did not have any direct experience in machine translation prior to this
+project, although he does have experience with the domain-adversarial
+approach used and neural networks.
 
 \bibliography{doc}{}
 \bibliographystyle{plain}
