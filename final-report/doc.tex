@@ -424,7 +424,69 @@ to insert a gemination (consonant-doubling) mark.
 
 \subsection*{Unsupervised Word Translation}
 
+\subsection*{Reproducing Results}
+
+We first attempt to reproduce the results of Word Translation Without Parellel
+Data on three language pairs: English paired with Spanish, French and Chinese.
+We use all the same hyperparameters as reported in the paper with the exception
+of the learning rate shrink parameter, which we change from 0.5 to 0.75, and
+center normalization, which they only do with Chinese.
+Moreover, the authors do not report the epoch size or number of training epochs
+for the unsupervised approach. It should be noted though that one of the authors 
+mention on their Github repository that they generally used smaller epoch sizes
+with more training epochs than the code's default of size 250k trained for 10
+epochs. This implies that each language pair may have been trained on different
+epoch sizes and number of epochs, making direct comparison a bit difficult.
+
+For the unsupervised results, we choose the model with the highest CSLS score
+and for the supervised resulls, the model with the highest precision @
+$\text{k}=1$. In some cases, the model with the highest precision did not have
+the highest CSLS score in the unsupervised case, and vice versa in the supervised
+case, which we discuss in depth in a later section.
+
+% Repro unsupervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
+    \hline
+    P@1 (WTWPD) & 81.7  & 83.3  & 82.3  & 82.1  & 32.5  & 31.4  \\
+    \hline
+    Precision@1 & 82.80 & 83.13 & 82.87 & 82.40 & 30.73 & 33.40 \\
+    CSLS        & 0.694 & 0.682 & 0.680 & 0.670 & 0.593 & 0.722 \\
+    \hline
+  \end{tabular}
+  \caption{Reproduced unsupervised results.}
+\end{table}
+
+% Repro Supervised results
+\begin{table}[h]
+  \centering
+  \begin{tabular}{||r|cc|cc|cc||}
+    \hline
+    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
+    \hline
+    P@1 (WTWPD) & 81.4  & 82.9  & 81.1  & 82.4  & 42.7  & 36.7  \\
+    \hline
+    Precision@1 & 82.27 & 83.47 & 82.87 & 81.93 & 42.73 & 25.13 \\
+    CSLS        & 0.700 & 0.715 & 0.722 & 0.705 & 0.576 & 0.596 \\
+    \hline
+  \end{tabular}
+  \caption{Reproduced supervised results.}
+\end{table}
+
+As seen in the above tables, we achieve roughly the same results as reported even
+with the small changes to our hyperparameters. We surprisingly outperform the
+reported precision in 8 language pairs (unsupervised and supervised), while getting
+comparable results on others with the exception of Zh-En, in which we more 
+significantly underperform.
+
 \subsection*{Japanese-English}
+
+Unfortunately, unsupervised word translation with the Japanese-English language
+pair and the default hyperparameters does not work. We are unable to get a
+non-zero precision at $\text{k}=1$.
 
 % Japanese unsupervised results
 \begin{table}[h]
@@ -437,6 +499,7 @@ to insert a gemination (consonant-doubling) mark.
     CSLS        & 0.497 & 0.518 \\
     \hline
   \end{tabular}
+  \caption{Unsupervised results for Japanese-English language pair with default hyperparameters.}
 \end{table}
 
 % Japanese supervised results
@@ -450,35 +513,10 @@ to insert a gemination (consonant-doubling) mark.
     CSLS        & 0.508 & 0.534 \\
     \hline
   \end{tabular}
+  \caption{Supervised results for Japanese-English language pair with default hyperparameters.}
 \end{table}
 
-\subsection*{Other Language Pairs}
-
-% Repro unsupervised results
-\begin{table}[h]
-  \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
-    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
-    \hline
-    Precision@1 & 82.80 & 83.13 & 82.87 & 82.40 & 30.73 & 33.40 \\
-    CSLS        & 0.694 & 0.682 & 0.680 & 0.670 & 0.593 & 0.722 \\
-    \hline
-  \end{tabular}
-\end{table}
-
-% Repro Supervised results
-\begin{table}[h]
-  \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
-    & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
-    \hline
-    Precision@1 & 82.27 & 83.47 & 82.87 & 81.93 & 42.73 & 25.13 \\
-    CSLS        & 0.700 & 0.715 & 0.722 & 0.705 & 0.576 & 0.596 \\
-    \hline
-  \end{tabular}
-\end{table}
+\subsection*{New Language Pairs}
 
 % New unsupervised results
 \begin{table}
