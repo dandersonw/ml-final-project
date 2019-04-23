@@ -10,8 +10,13 @@
 \usepackage{xeCJK}
 \usepackage{chngpage}
 \usepackage{float}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage[margin=1in]{geometry}
+\usepackage[bottom]{footmisc}
 \setCJKmainfont{IPAMincho}
-\graphicspath{ {images/} }
+\graphicspath{ {./images/} }
+\onehalfspacing
 
 \setlength{\parindent}{4em}
 \setlength{\parskip}{1em}
@@ -57,6 +62,7 @@ Derick has a personal interest in Japanese, transliteration, and both together.
 Timothy would like to gain experience in natural language processing and machine
 translation.
 
+\noindent
 All of our code is available on GitHub
 \footnote{https://github.com/dandersonw/ml-final-project}.
 
@@ -217,7 +223,7 @@ $$
 
 \subsection*{Unsupervised Word Translation}
 
-\subsection*{Data}
+\subsubsection*{Data}
 
 We begin by downloading pre-trained monolingual word vectors for English, Japanese,
 and all the other languages we plan to run experiments with \cite{bojanowski2017enriching}.
@@ -233,7 +239,7 @@ Spanish, French, Chinese, Portuguese, Hebrew, Hindi, Thai, Korean, and Arabic. T
 allows us to first reproduce their results on 3 language pairs, along with test their
 method's generalization on 7 new language pairs of varying similarity.
 
-\subsection*{Methodology}
+\subsubsection*{Methodology}
 
 As we are simply reproducing the results outlined in Word Translation Without Parallel
 Data, we use the same training architecture and methodology. Firstly, only the 200k
@@ -253,6 +259,7 @@ criterion does not correlate as well with word translation precision on new lang
 pairs, we change this shrink parameter to 0.75. Moreover, we normalize all embeddings
 by subtracting the mean embedding.
 
+\noindent
 For the mapping matrix $W$'s update rule, an orthogonal constrant is imposed, where
 $\beta=0.01$:
 $$
@@ -261,7 +268,7 @@ $$
 
 When generating the synthetic parallel data to be used for transliteration, we take
 the aligned Japanese embedding space with the best word translation precision
-@ $\text{k}=1$ and generate proposed translations for the 50k most frequent
+at $\text{k}=1$ and generate proposed translations for the 50k most frequent
 source words using CSLS. We choose the top 50k words since that is the largest
 amount our computer can handle to perform CSLS on at the same time. While we could
 run vanilla K nearest neighbors in "batches", this produces worse translations
@@ -274,11 +281,11 @@ and adverbs (e.g. and, to, the, moreover, at, nevertheless, then, likewise, etc.
 Then before transliteration, we filter out translated words that appear more than
 20 times.
 
-\subsection*{Evaluation}
+\subsubsection*{Evaluation}
 
 The proposed validation metric CSLS is used with the 10k most frequent source words
 for model selection (and when deciding to shrink the learning rate during training).
-However for final evaluation, we simply use word translation precision @
+However for final evaluation, we simply use word translation precision at
 $\text{k}=1$. This is to ensure the translations used for transliteration are as
 accurate as possible.
 
@@ -370,7 +377,7 @@ and two decoders, one for katakana and one for pronunciation.
 We first train in a round-robin fashion,
 an epoch per predicted script per round,
 until convergence (as measured by an early stopping criterion).
-We then train on only the English -> Japanese pair
+We then train on only the English $\rightarrow$ Japanese pair
 until convergence.
 The hope is that the encoder learns a representation useful to both decoders,
 and that the supervision provided by the pronunciation data
@@ -407,7 +414,7 @@ Typically Levenshtein distance is normalized in a few ways
 when evaluating transliteration models.
 The first way is normalizing by the length of the ground-truth answer,
 to get a character error rate (CER):
-$$CER(gold, predicted) = \frac{Levenshtein(gold, predicted)}{length(gold)}$$.
+$$CER(gold, predicted) = \frac{Levenshtein(gold, predicted)}{length(gold)}$$
 Word error rate (WER) is the same as CER,
 except it is calculated on a word-level instead of character-level.
 It is used by the Google neural transliteration paper,
@@ -431,7 +438,7 @@ to insert a gemination (consonant-doubling) mark.
 
 \subsection*{Unsupervised Word Translation}
 
-\subsection*{Reproducing Results}
+\subsubsection*{Reproducing Results}
 
 We first attempt to reproduce the results of Word Translation Without Parellel
 Data on three language pairs: English paired with Spanish, French and Chinese.
@@ -448,7 +455,7 @@ trained on different epoch sizes, number of epochs and number of refinement
 iterations, making direct comparison difficult.
 
 For the unsupervised results, we choose the model with the highest CSLS score
-and for the supervised resulls, the model with the highest precision @
+and for the supervised resulls, the model with the highest precision at
 $\text{k}=1$. In some cases, the model with the highest precision did not have
 the highest CSLS score in the unsupervised case, and vice versa in the supervised
 case, which we discuss in depth in a later section.
@@ -456,15 +463,15 @@ case, which we discuss in depth in a later section.
 % Repro unsupervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+  \begin{tabular}{r|cc|cc|cc}
+    \toprule
     & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
-    \hline
+    \midrule
     P@1 (WTWPD) & 81.7  & 83.3  & 82.3  & 82.1  & 32.5  & 31.4  \\
-    \hline
+    \midrule
     Precision@1 & 82.80 & 83.13 & 82.87 & 82.40 & 30.73 & 33.40 \\
     CSLS        & 0.694 & 0.682 & 0.680 & 0.670 & 0.593 & 0.722 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Reproduced unsupervised results.}
 \end{table}
@@ -472,15 +479,15 @@ case, which we discuss in depth in a later section.
 % Repro Supervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+  \begin{tabular}{r|cc|cc|cc}
+    \toprule
     & En-Es & Es-En & En-Fr & Fr-En & En-Zh & Zh-En \\
-    \hline
+    \midrule
     P@1 (WTWPD) & 81.4  & 82.9  & 81.1  & 82.4  & 42.7  & 36.7  \\
-    \hline
+    \midrule
     Precision@1 & 82.27 & 83.47 & 82.87 & 81.93 & 42.73 & 25.13 \\
     CSLS        & 0.700 & 0.715 & 0.722 & 0.705 & 0.576 & 0.596 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Reproduced supervised results.}
 \end{table}
@@ -491,7 +498,7 @@ reported precision in 8 language pairs (unsupervised and supervised), while gett
 comparable results on others with the exception of Zh-En, in which we more 
 significantly underperform.
 
-\subsection*{Japanese-English}
+\subsubsection*{Japanese-English}
 
 Unfortunately, unsupervised word translation with the Japanese-English language
 pair and the default hyperparameters does not work. We are unable to get a
@@ -505,13 +512,13 @@ model.
 % Japanese unsupervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc||}
-    \hline
+  \begin{tabular}{r| c | c}
+    \toprule
     & En-Ja & Ja-En \\
-    \hline
+    \midrule
     Precision@1 &  0.00 &  0.00 \\
     CSLS        & 0.497 & 0.518 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Unsupervised results for Japanese-English language pair with default hyperparameters.}
 \end{table}
@@ -519,17 +526,18 @@ model.
 % Japanese supervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc||}
-    \hline
+  \begin{tabular}{r| c | c}
+    \toprule
     & En-Ja & Ja-En \\
-    \hline
+    \midrule
     Precision@1 & 12.75 &  7.72 \\
     CSLS        & 0.508 & 0.534 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Supervised results for Japanese-English language pair with default hyperparameters.}
 \end{table}
 
+\noindent
 There are many reasons we believe is causing the unsupervised approach to not work.
 
 First, a quick pass through the Japanese word vectors shows some incorrect/noisy
@@ -554,7 +562,7 @@ score and word translation precision in more depth in a later section.
 Third, we observe that the domain-adversarial approach is highly sensitive to
 hyperparameters, which is consistent with previous work on similar adversarial
 methods (e.g. GANs). We attempt to do a qualitative manual grid search for
-the best hyperparameters, but were unable to get higher than 0.5 precision @
+the best hyperparameters, but were unable to get higher than 0.5 precision at
 $\text{k}=1$ (We notice that doubling the learning rate and decreasing the epoch
 size improves performance). The large search space and training time (~30 minutes)
 caused this to be inefficient. We did however observe cases where the precision
@@ -564,7 +572,7 @@ therefore was not selected.
 We choose the model trained via the supervised approach, with 7.72 precision, to
 generate the vocabulary to use for the transliteration task.
 
-\subsection*{New Language Pairs}
+\subsubsection*{New Language Pairs}
 
 To see if these poor results were exclusive to Japanese, we run experiments
 on 7 more new language pairs.
@@ -572,21 +580,19 @@ on 7 more new language pairs.
 % New unsupervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+  \begin{tabular}{r|cc|cc|cc}
+    \toprule
     & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En \\
-    \hline
+    \midrule
     Precision@1 & 79.20 & 79.33 & 13.17 &  0.00 &  0.00 & 48.53 \\
     CSLS        & 0.668 & 0.660 & 0.562 & 0.516 & 0.467 & 0.575 \\
-    \hline
-  \end{tabular}
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+    \midrule
+    \midrule
     & En-Th & Th-En & En-He & He-En & En-Hi & Hi-En \\
-    \hline
+    \midrule
     Precision@1 &  0.00 &  0.00 & 37.00 &  0.00 &  0.00 &  0.00 \\
     CSLS        & 0.465 & 0.498 & 0.582 & 0.451 & 0.477 & 0.452 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Unsupervised results for new language pairs.}
 \end{table}
@@ -594,21 +600,19 @@ on 7 more new language pairs.
 % New supervised results
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+  \begin{tabular}{r|cc|cc|cc}
+    \toprule
     & En-Pt & Pt-En & En-Ko & Ko-En & En-Ar & Ar-En \\
-    \hline
+    \midrule
     Precision@1 & 79.93 & 80.40 & 31.47 & 28.61 & 36.47 & 49.73 \\
     CSLS        & 0.719 & 0.701 & 0.622 & 0.600 & 0.634 & 0.626 \\
-    \hline
-  \end{tabular}
-  \begin{tabular}{||r|cc|cc|cc||}
-    \hline
+    \midrule
+    \midrule
     & En-Th & Th-En & En-He & He-En & En-Hi & Hi-En \\
-    \hline
+    \midrule
     Precision@1 & 22.53 & 19.97 & 40.20 & 54.14 & 33.60 & 44.54 \\
     CSLS        & 0.585 & 0.581 & 0.641 & 0.612 & 0.636 & 0.615 \\
-    \hline
+    \bottomrule
   \end{tabular}
   \caption{Supervised results for new language pairs.}
 \end{table}
@@ -630,7 +634,7 @@ In the case of the Arabic-English pair, the refinement procedure improves
 the precision from 15.3 to 48.5. Again, if the refinement procedure
 begins with a poorly performing model, it will not be able to improve.
 
-\subsection*{CSLS Analysis}
+\subsubsection*{CSLS Analysis}
 
 As noted several times in the previous sections, the CSLS metric is a
 significant cause for poor model performance. For an unsupervised
@@ -644,33 +648,33 @@ claim that this crucially influences the correlation.
 % Correlation
 \begin{table}[h]
   \centering
-  \begin{tabular}{||r|c|c||}
-    \hline
+  \begin{tabular}{r|c c}
+    \toprule
     Pair & P@1 & $\text{R}^2$ \\
-    \hline
+    \midrule
     En-Es & 82.8 & 0.86 \\
     Es-En & 83.1 & 0.86 \\
-    \hline
+    \midrule
     En-Fr & 82.9 & 0.89 \\
     Fr-En & 82.4 & 0.87 \\
-    \hline
+    \midrule
     En-Zh & 30.7 & 0.02 \\
     Zh-En & 33.4 & 0.71 \\
-    \hline
+    \midrule
     En-Pt & 79.2 & 0.78 \\
     Pt-En & 79.3 & 0.83 \\
-    \hline
+    \midrule
     En-Ko & 13.2 & 0.78 \\
     Ko-En &  0.0 &  0.0 \\
-    \hline
+    \midrule
     En-Ar &  0.0 &  0.0 \\
     Ar-En & 48.5 & 1.00 \\
-    \hline
+    \midrule
     En-He & 37.0 & 0.91 \\
     He-En &  0.0 &  0.0 \\
-    \hline
+    \bottomrule
   \end{tabular}
-  \caption{Unsupervised precision @ $\text{K}=1$ and $\text{R}^2$ values for various language pairs.}
+  \caption{Unsupervised precision at $\text{K}=1$ and $\text{R}^2$ values for various language pairs.}
 \end{table}
 
 From the above table, we observe that as the language pairs become more distant, the
@@ -712,10 +716,12 @@ For decoding we use beam search with ten beams.
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
+    \toprule
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \hline
+    \midrule
     our pairs & 0.007 & 0.011 & 0.741 & 0.866 \\
     our pairs + CMU & 0.021 & 0.031 & 0.717 & 0.844 \\
+    \bottomrule
   \end{tabular}
   \caption{Results of learning transliteration on our generated word
     translations. Evaluated on MUSE data}
@@ -735,12 +741,14 @@ but even tripled it is still only 2.1\%.
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
+    \toprule
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \hline
+    \midrule
     eob & 0.403 & 0.486 & 0.240 & 0.312 \\
     eob + CMU & 0.441 & 0.526 & 0.222 & 0.290 \\
-    \hline
+    \midrule
     ideal model (memorized MUSE data) & 0.959 & 0.979 & 0.021 & 0.016\\
+    \bottomrule
   \end{tabular}
   \caption{Other models evaluated on MUSE data}
   \label{tab:other-muse}
@@ -761,12 +769,14 @@ as the MUSE data does contain some translations that are not transliterations
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
+    \toprule
     Training Data & Accuracy & MRR@5 & CER* & CER \\
-    \hline
+    \midrule
     eob & 0.500 & 0.578 & 0.154 & 0.197 \\
     eob + CMU & 0.535 & 0.614 & 0.147 & 0.189 \\
-    \hline
+    \midrule
     ideal model (memorized eob data) & 0.935 & 0.967 & 0.030 & 0.025 \\
+    \bottomrule
   \end{tabular}
   \caption{Models evaluated on test split of eob data}
   \label{tab:eob-results}
@@ -782,11 +792,13 @@ by a deterministic transliterator.
 \begin{table}[h]
   \centering
   \begin{tabular}{r | c c c c}
+    \toprule
     Model & 1 - WER & WER & CER \\
-    \hline
+    \midrule{}
     Seq2Seq, bidirectional one layer GRU & 0.454 & 0.546 & .226 \\
     best Seq2Seq model & .498 & .502 & .202 \\
     best of any model & .498 & .502 & .181 \\
+    \bottomrule
   \end{tabular}
   \caption{Rosca and Breuel \cite{Rosca2016SequencetosequenceNN} (Google neural
     transliteration paper)}
@@ -843,8 +855,8 @@ poor performance is the weak correlation between their proposed
 validation criterion and actual word translation precision.
 
 Future work in this task may include measuring performance when translating
-to an intermediate language first (i.e. Japanese \rightarrow Korean
-\rightarrow English), along with improving the validation criterion to
+to an intermediate language first (i.e. Japanese $\rightarrow$ Korean
+$\rightarrow$ English), along with improving the validation criterion to
 deal with distant language pairs.
 
 A multitask learning approach for utilizing pronunciation information
