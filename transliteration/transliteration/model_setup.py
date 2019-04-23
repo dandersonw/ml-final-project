@@ -52,7 +52,8 @@ def transfer_learning_setup(*,
                             from_script,
                             transfer_to_script,
                             to_script,
-                            style='normal'):
+                            style='normal',
+                            restore=False):
     """First train on from_script -> transfer_to_script, then transfer the encoder to
     from_script -> to_script.
 
@@ -75,9 +76,13 @@ def transfer_learning_setup(*,
                        transfer_decoder_config=transfer_decoder_config,
                        optimizer=optimizer,
                        to_script=to_script,
-                       transfer_to_script=transfer_to_script)
+                       transfer_to_script=transfer_to_script,
+                       restore=restore)
 
     for setup in [initial, main]:
+        if setup['encoder'] is None or setup['decoder'] is None:
+            # We have a partial setup when restoring
+            continue
         train.exercise_encoder_decoder(encoder=setup['encoder'],
                                        decoder=setup['decoder'],
                                        to_script=setup['to_script'])
@@ -95,7 +100,8 @@ def _normal_transfer_setup(*,
                            transfer_decoder_config,
                            to_script,
                            optimizer,
-                           transfer_to_script):
+                           transfer_to_script,
+                           restore):
     config_keys = {**transfer_decoder_config,
                    **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
     t_decoder_config_obj = model_one.Config(**config_keys)
@@ -145,11 +151,8 @@ def _combined_transfer_setup(*,
                              transfer_decoder_config,
                              to_script,
                              optimizer,
-                             transfer_to_script):
-    config_keys = {**transfer_decoder_config,
-                   **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
-    t_decoder_config_obj = model_one.Config(**config_keys)
-    transfer_decoder = model_one.Decoder(t_decoder_config_obj)
+                             transfer_to_script,
+                             restore):
 
     config_keys = {**transfer_encoder_config,
                    **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
@@ -165,12 +168,20 @@ def _combined_transfer_setup(*,
     encoder_config_obj = model_one.Config(**config_keys)
     encoder = model_one.CombinedEncoder(encoder_config_obj, transfer_encoder)
 
+    transfer_decoder = None
+    if not restore:
+        config_keys = {**transfer_decoder_config,
+                       **{'vocab_size': script.SCRIPTS[transfer_to_script].vocab_size}}
+        t_decoder_config_obj = model_one.Config(**config_keys)
+        transfer_decoder = model_one.Decoder(t_decoder_config_obj)
+    optional = not restore and {'transfer_decoder': transfer_decoder} or dict()
+
     def make_checkpoint_obj():
         return tf.train.Checkpoint(optimizer=optimizer,
                                    transfer_encoder=transfer_encoder,
-                                   transfer_decoder=transfer_decoder,
                                    encoder=encoder,
-                                   decoder=decoder)
+                                   decoder=decoder,
+                                   **optional)
 
     initial = {'setup': 'normal',
                'encoder': transfer_encoder,
@@ -205,7 +216,8 @@ def _stacked_transfer_setup(*,
                             decoder_config,
                             to_script,
                             optimizer,
-                            transfer_to_script):
+                            transfer_to_script,
+                            restore):
     config_keys = {**transfer_encoder_config,
                    **{'vocab_size': script.SCRIPTS[from_script].vocab_size}}
     t_encoder_config_obj = model_one.Config(**config_keys)
@@ -288,14 +300,18 @@ def load_from_pkl(save_path):
                               from_script=dump['from_script'],
                               to_script=dump['to_script'])
     elif setup_style in {'stacked', 'combined'}:
+        # these two things can be None
+        transfer_decoder_config = dump['config'].get('transfer_decoder')
+        transfer_to_script = dump.get('transfer_to_script')
         _, result = transfer_learning_setup(encoder_config=dump['config']['encoder'],
                                             decoder_config=dump['config']['decoder'],
                                             transfer_encoder_config=dump['config']['transfer_encoder'],
-                                            transfer_decoder_config=dump['config']['transfer_decoder'],
+                                            transfer_decoder_config=transfer_decoder_config,
                                             from_script=dump['from_script'],
                                             to_script=dump['to_script'],
-                                            transfer_to_script=dump['transfer_to_script'],
-                                            style=setup_style)
+                                            transfer_to_script=transfer_to_script,
+                                            style=setup_style,
+                                            restore=True)
     else:
         raise ValueError()
     saved_weights = dump['weights']
@@ -310,4 +326,3 @@ def pre_training_freeze(setup):
             m = setup[m]
             for l in m.layers:
                 l.trainable = False
-
