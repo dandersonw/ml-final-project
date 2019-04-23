@@ -60,7 +60,7 @@
       a linear mapping and $X,Y$ are monolingual word embeddings.
     \item A refinement procedure where a synthetic vocabulary is constructed
       with the learned $W$ to apply the Procrustes solution (i.e.
-      min $\|WX-Y\|_2 = SVD(YX^T)$).
+      min $\|WX-Y\|_2 = UV^T$, where $U\Sigma V^T = SVD(YX^T)$).
       \begin{itemize}
         \item This can be used with ground truth data as a supervised
           approach as well.
@@ -119,14 +119,14 @@
   \begin{columns}
     \column{0.5\textwidth}
     \begin{table}
-      \begin{tabular}{l | c }
-      Language & $\text{R}^2$ \\
+      \begin{tabular}{l | c | c }
+      Language & $\text{R}^2$ & P@1 \\
       \hline \hline
-      Spanish & 0.8581 \\
-      Korean & 0.7754 \\
-      French & 0.7722 \\
-      Chinese & 0.0237 \\
-      Japanese & -0.2715
+      Spanish & 0.8581 & 83.3 \\
+      Korean & 0.7754 & 13.2 \\
+      French & 0.7722 & 82.1 \\
+      Chinese & 0.0237 & 31.4 \\
+      Japanese & -0.2715 & 0.0
       \end{tabular}
     \end{table}
     \column{0.5\textwidth}
