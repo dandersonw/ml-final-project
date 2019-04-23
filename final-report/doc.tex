@@ -118,7 +118,7 @@ Back-transliteration is the process of
 transforming a katakana string that represents an English word
 back into the English word it represents.
 The Ravi and Knight work seems to be followed up some other work
-like a paper by Levinboim et. al. \cite{Levinboim2015ModelIR}
+like a paper by Levinboim et al. \cite{Levinboim2015ModelIR}
 which aims to improve the same basic approach.
 The key difference between their approach and ours
 is that theirs requires a well trained model of Japanese and English phonetics.
@@ -189,26 +189,25 @@ Supervised methods attempt to learn a linear mapping $W$ between the source and 
 space such that $WX-Y$ is minimized, where $X$ and $Y$ are the source and target word
 embedding pairs, respectively. Because they attempt to learn $W$ without cross-lingual 
 supervision, they use a domain-adversarial approach, where a discriminator is trained
-to discriminate between translated (i.e. generated) words and words actually from the
-target domain, and $W$ is simultaneously trained to "fool" the discriminator by making
+to discriminate between translated (generated) words and words actually from the
+target domain, and $W$ is simultaneously trained to ``fool'' the discriminator by making
 the generated words as similar to the target words as possible.
 
-While the learned $W$ roughly aligns the two embedding spaces, Conneau et al add two
+While the learned $W$ roughly aligns the two embedding spaces, Conneau et al. add two
 modifications to further align the spaces:
 
 First, a refinement procedure is proposed where the $W$ trained via the
 adversarial method is used to generate a synthetic parallel vocabulary, which is
 then used to minimize $WX-Y$ in a supervised manner. More specifically, they use
-the generated parallel vocabulary to apply the Procrustes solution (i.e.
-min $\|WX-Y\|_2 = UV^T$, where $U\Sigma V^T = SVD(YX^T)$). This is repeated several
+the generated parallel vocabulary to apply the Procrustes solution (min $\|WX-Y\|_2 = UV^T$, where $U\Sigma V^T = SVD(YX^T)$). This is repeated several
 times, with the expectation being that the generated data improves each iteration.
-This approach can also be "kickstarted" in a supervised manner by simply applying
+This approach can also be ``kickstarted'' in a supervised manner by simply applying
 the first iteration with a ground truth parallel vocabulary.
 
-Second, they introduce a cross-domain similarity adaptation, cross-domain similarity
-local scaling (CSLS), to mitigate the "hubness problem"
-(i.e. in high dimensional spaces, some points tend to be nearest neighbors
-to many other points). Specifically, they use the mean similarity of a source
+Second, they introduce a cross-domain similarity adaptation, cross-domain
+similarity local scaling (CSLS), to mitigate the ``hubness problem'' (the
+tendency of some points to be the nearest neighbors of many others in high
+dimensional spaces). Specifically, they use the mean similarity of a source
 embedding translation ($Wx_s$) to its target K nearest neighbors:
 $$
 r_T(Wx_s)=\frac{1}{K}\sum_{y_t \in \mathcal{N}_T(Wx_s)} \text{cos}(Wx_s, y_t)
@@ -250,7 +249,7 @@ functions and a dropout rate of 0.1. The default training parameters for
 both the discriminator and $W$ as described in the paper are a
 batch size of 32, learning rate of 0.1, learning rate decay of 0.95, smoothing
 coefficient of 0.2, epoch size of 250k and a learning rate shrink parameter of 0.5
-(i.e. whenever the unsupervised validation criterion decreases after a training epoch
+(whenever the unsupervised validation criterion decreases after a training epoch
 they divide the learning rate in half). We also apply the iterative refinement
 procedure 8 times after the initial adversarial training, starting with the model with
 the highest CSLS score. Optimization is done by stochastic gradient descent.
@@ -271,14 +270,14 @@ the aligned Japanese embedding space with the best word translation precision
 at $\text{k}=1$ and generate proposed translations for the 50k most frequent
 source words using CSLS. We choose the top 50k words since that is the largest
 amount our computer can handle to perform CSLS on at the same time. While we could
-run vanilla K nearest neighbors in "batches", this produces worse translations
+run vanilla K nearest neighbors in batches, this produces worse translations
 since the hubness problem persists.
 
 Although CSLS aims to reduce hubs, it does not completely solve the problem.
 Therefore we first remove certain words from the target dictionary that qualitatively
-show up as incorrect translations for many source words, these are mainly articles
-and adverbs (e.g. and, to, the, moreover, at, nevertheless, then, likewise, etc.).
-Then before transliteration, we filter out translated words that appear more than
+show up as incorrect translations for many source words, mainly articles
+and adverbs (e.g. and, the, moreover, likewise).
+Then, before transliteration, we filter out translated words that appear more than
 20 times.
 
 \subsubsection*{Evaluation}
@@ -293,7 +292,8 @@ accurate as possible.
 
 \subsubsection*{Data}
 
-We use a few external sources of data.
+Besides the word translations we generate
+we use a few external sources of data.
 Facebook Research provides a ground truth English-Japanese dictionary
 of the same sort as is used for their evaluation of word translation,
 available on their GitHub
@@ -329,9 +329,9 @@ like the well known Google neural machine translation model
 Not surprisingly,
 some people at Google did try that \cite{Rosca2016SequencetosequenceNN}
 and found that the results were highly competitive.
-Since attentional sequence-to-sequence models \cite{Bahdanau2015NeuralMT}
-are so well known,
-we won't describe the basic architecture here.
+We won't reprint the basic architecture here
+since attentional sequence-to-sequence models \cite{Bahdanau2015NeuralMT}
+are so well known.
 
 Treating words as just sequences of characters
 diverges from a lot of transliteration methods
@@ -407,7 +407,7 @@ the correct transliteration
 The third is mean reciprocal rank (MRR):
 a measure of how far down the list of possible results
 (ordered in direction of decreasing probability)
-the correct answer is
+the correct answer is found
 \footnote{https://en.wikipedia.org/wiki/Mean\_reciprocal\_rank}.
 
 Typically Levenshtein distance is normalized in a few ways
@@ -541,9 +541,9 @@ model.
 There are many reasons we believe is causing the unsupervised approach to not work.
 
 First, a quick pass through the Japanese word vectors shows some incorrect/noisy
-tokenization. For instance, "さらに共和党予備選挙で各候補に投じられた票数よりも多かった"
-is a single token, which Google translates to "Furthermore, it was more than
-the number of votes cast for each candidate in Republican primaries". Trying to
+tokenization. For instance, ``さらに共和党予備選挙で各候補に投じられた票数よりも多かった''
+is a single token, which Google translates to ``Furthermore, it was more than
+the number of votes cast for each candidate in Republican primaries''. Trying to
 align word embeddings that are noisy to begin with will definitely hurt the final
 precision of the model, however further analysis is required to determine how
 many of these mistakes are present.
@@ -564,7 +564,7 @@ hyperparameters, which is consistent with previous work on similar adversarial
 methods (e.g. GANs). We attempt to do a qualitative manual grid search for
 the best hyperparameters, but were unable to get higher than 0.5 precision at
 $\text{k}=1$ (We notice that doubling the learning rate and decreasing the epoch
-size improves performance). The large search space and training time (~30 minutes)
+size improves performance). The large search space and training time (approx. 30 minutes)
 caused this to be inefficient. We did however observe cases where the precision
 increased to about 2, but the CSLS metric did not reflect the improvements and
 therefore was not selected.
@@ -621,10 +621,10 @@ From the above tables, we observe that like with Japanese, several
 language pairs are unable to get a nonzero precision, including Thai,
 Hindi, Korean-English, Hebrew-English and English-Arabic.
 A significant reason why Thai and Hindi perform poorly is most likely
-because they have significant smaller word vectors to align. But what
+because they have significantly smaller word vectors to align. But what
 is interesting are the cases where one direction gets zero precision
-while translating in the other one performs well. Intuitively, the
-precision would be comparable when translating in either direction as
+but translating in the other one performs well. Intuitively, the
+precision should be comparable when translating in either direction, as
 seen in the supervised results, since we are just aligning two
 embedding spaces. The fact that this does not occur with the
 unsupervised approach implies that initialization may greatly influence
@@ -632,18 +632,18 @@ the performance. Also we see the same problem as noted in the previous
 section on how the CSLS metric does not correlate well with precision.
 In the case of the Arabic-English pair, the refinement procedure improves
 the precision from 15.3 to 48.5. Again, if the refinement procedure
-begins with a poorly performing model, it will not be able to improve.
+begins with a poorly performing model it will not be able to improve.
 
 \subsubsection*{CSLS Analysis}
 
 As noted several times in the previous sections, the CSLS metric is a
-significant cause for poor model performance. For an unsupervised
-validation criterion to work, it must correlate well with an equivalent
-supervised criterion, like word translation precision. Conneau et al.
-briefly touch upon this by plotting both the unsupervised metric and
-precision over training epochs, showing a strong correlation between the two.
-However they do not specify which languages those metrics correspond to. We
-claim that this crucially influences the correlation.
+significant cause for poor model performance. An unsupervised validation
+criterion must correlate well with an equivalent supervised criterion (e.g. word
+translation precision) in order to work. Conneau et al. briefly touch upon this
+by plotting both the unsupervised metric and precision over training epochs,
+showing a strong correlation between the two. However they do not specify which
+languages those metrics correspond to. We claim that this crucially influences
+the correlation.
 
 % Correlation
 \begin{table}[h]
@@ -694,7 +694,7 @@ English-Arabic, English-Hebrew), the difference in the two values increase great
 \end{figure}
 
 As stated before, if the model validation criterion does not correlate with
-precision, there is little chance it will successfully improve. This
+precision there is little chance it will successfully improve. This
 explains why language pairs with low correlation also achieve low precision values.
 
 \subsection*{Transliteration}
@@ -728,10 +728,9 @@ For decoding we use beam search with ten beams.
   \label{tab:our-muse}
 \end{table}
 
-We conducted an experiment to learn transliteration from word translations,
-according to the methods section above.
-We also conducted an experiment with multitask learning
-using our translations for the Japanese script.
+We conduct two experiments using our translations for the Japanese script,
+one learning with just them
+and one where we incorpororate the CMU pronunciation data.
 As you can see in Table \ref{tab:our-muse},
 the model did not succeed in learning transliteration
 from the dataset we generated with word translation.
@@ -759,7 +758,7 @@ Table \ref{tab:other-muse} contains the results of evaluating
 the models trained on other data on the MUSE set.
 Since the MUSE data has some ambiguity,
 i.e. it provides multiple translations for some words,
-We also calculate the ceiling for each metric
+we also calculate the ceiling for each metric
 that could be reached by memorizing the test data.
 We note that that ceiling isn't
 the ceiling that could be reached by the ideal transliterator,
@@ -782,11 +781,11 @@ as the MUSE data does contain some translations that are not transliterations
   \label{tab:eob-results}
 \end{table}
 
-We conducted a normal training experiment on the eob data,
-and one with multitask learning as described in the methods section,
-and report the results in Table \ref{tab:eob-results}.
+In Table \ref{tab:eob-results}. we report the results
+of a normal experiment on the eob data
+and one with pronunciation data incorporated.
 Since the eob data contains multiple transliterations for some words
-We also report the ceiling achievable for each metric
+we also report the ceiling achievable for each metric
 by a deterministic transliterator.
 
 \begin{table}[h]
@@ -808,7 +807,8 @@ by a deterministic transliterator.
 For comparison we reprint excerpted results
 from Rosca and Breuel \cite{Rosca2016SequencetosequenceNN}
 in Table \ref{tab:baseline-results}.
-They are not exactly comparable
+Unfortunately,
+the numbers are not exactly comparable
 because we do not have access to the test split they used.
 Furthermore,
 they report a word error rate,
@@ -855,7 +855,7 @@ poor performance is the weak correlation between their proposed
 validation criterion and actual word translation precision.
 
 Future work in this task may include measuring performance when translating
-to an intermediate language first (i.e. Japanese $\rightarrow$ Korean
+to an intermediate language first (e.g. Japanese $\rightarrow$ Korean
 $\rightarrow$ English), along with improving the validation criterion to
 deal with distant language pairs.
 
